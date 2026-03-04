@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { ScrollView, TouchableOpacity, Text, Alert } from "react-native";
 import { Feather } from '@expo/vector-icons';
-import { ProfileHeader } from "../../components/sreenUserProfile/ProfileHeader";
-import { StatsBar } from "../../components/sreenUserProfile/StatsBar";
-import { PersonalInfoForm } from "../../components/sreenUserProfile/PersonalInfoForm";
-import { MyPlantsSection } from "../../components/sreenUserProfile/MyPlantsSection";
-import { SettingsPanel } from "../../components/sreenUserProfile/SettingsPanel";
+import { ProfileHeader } from "../../components/screenUserProfile/ProfileHeader";
+import { StatsBar } from "../../components/screenUserProfile/StatsBar";
+import { PersonalInfoForm } from "../../components/screenUserProfile/PersonalInfoForm";
+import { MyPlantsSection } from "../../components/screenUserProfile/MyPlantsSection";
+import { SettingsPanel } from "../../components/screenUserProfile/SettingsPanel";
 import { getStyles } from "./UserProfilestyles";
 import { lightTheme, darkTheme } from "../../theme/colors";
 
