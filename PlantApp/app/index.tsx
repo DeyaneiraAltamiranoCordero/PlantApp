@@ -1,10 +1,10 @@
 //index.tsx
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import UserProfile from "../src/screens/userProfile/UserProfile";
 
 export default function Index() {
   return (
-    <View>
+    <View style={{ flex: 1 }}>
       <UserProfile />
     </View>
   );

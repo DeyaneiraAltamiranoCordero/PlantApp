@@ -2,5 +2,5 @@
 import { Stack } from "expo-router";
 
 export default function RootLayout() {
-  return <Stack screenOptions={{ title: "GardenCare" }} />;
+  return <Stack screenOptions={{ title: "Flora" }} />;
 }
