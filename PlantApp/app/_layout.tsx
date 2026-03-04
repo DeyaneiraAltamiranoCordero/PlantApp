@@ -20,7 +20,6 @@ function RootStack() {
         },
       }}
     >
-      {}
       <Slot />
     </Stack>
   );
@@ -29,8 +28,7 @@ function RootStack() {
 export default function RootLayout() {
   return (
     <ThemeProvider>
-      {/* always redirect root to tabs/home */}
-      <Redirect href="/(tabs)/home" />
+      {/* root stack handles rendering; redirect is managed by index.tsx */}
       <RootStack />
     </ThemeProvider>
   );

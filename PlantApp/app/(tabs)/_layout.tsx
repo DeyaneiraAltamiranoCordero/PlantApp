@@ -11,7 +11,7 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,
-        tabBarActiveTintColor: theme.accentForeground,
+        tabBarActiveTintColor: theme.destructiveForeground ,
         tabBarInactiveTintColor: theme.mutedForeground,
         tabBarStyle: {
           backgroundColor: theme.card,
@@ -41,7 +41,7 @@ export default function TabLayout() {
         options={{
           title: 'Plantas',
           tabBarIcon: ({ color, size }) => (
-            <Feather name="activity" size={size} color={color} />
+            <Feather name="heart" size={size} color={color} />
           ),
         }}
       />
