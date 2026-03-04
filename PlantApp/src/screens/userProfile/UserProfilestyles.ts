@@ -40,6 +40,7 @@ export const getStyles = (colors: ThemeColors) => StyleSheet.create({
         color: colors.secondaryForeground,
         fontSize: typography.size.xxl,
         fontWeight: typography.weight.bold,
+        fontFamily: typography.fontFamily.bold,
     },
     cameraButton: {
         position: 'absolute',
@@ -70,11 +71,13 @@ export const getStyles = (colors: ThemeColors) => StyleSheet.create({
     name: {
         fontSize: typography.size.xl,
         fontWeight: typography.weight.bold,
+        fontFamily: typography.fontFamily.bold,
         color: colors.foreground,
     },
     nickname: {
         fontSize: typography.size.base,
         color: colors.mutedForeground,
+        fontFamily: typography.fontFamily.default,
     },
 
     // --- Personal Info Form Styles ---
@@ -101,6 +104,7 @@ export const getStyles = (colors: ThemeColors) => StyleSheet.create({
     formTitle: {
         fontSize: typography.size.lg,
         fontWeight: typography.weight.bold,
+        fontFamily: typography.fontFamily.bold,
         color: colors.foreground,
         marginBottom: spacing.sm,
     },
@@ -115,6 +119,7 @@ export const getStyles = (colors: ThemeColors) => StyleSheet.create({
     label: {
         fontSize: typography.size.base,
         fontWeight: typography.weight.semibold,
+        fontFamily: typography.fontFamily.semibold,
         color: colors.foreground,
     },
     input: {
@@ -124,6 +129,7 @@ export const getStyles = (colors: ThemeColors) => StyleSheet.create({
         paddingVertical: spacing.md,
         color: colors.foreground,
         fontSize: typography.size.base,
+        fontFamily: typography.fontFamily.default,
         borderWidth: 1,
         borderColor: 'transparent',
     },
@@ -141,6 +147,7 @@ export const getStyles = (colors: ThemeColors) => StyleSheet.create({
     subtitleLabel: {
         fontSize: 10,
         fontWeight: typography.weight.bold,
+        fontFamily: typography.fontFamily.bold,
         textTransform: 'uppercase',
         letterSpacing: 0.5,
         color: colors.mutedForeground,
@@ -162,11 +169,13 @@ export const getStyles = (colors: ThemeColors) => StyleSheet.create({
     tagText: {
         fontSize: typography.size.sm,
         fontWeight: typography.weight.semibold,
+        fontFamily: typography.fontFamily.semibold,
         color: colors.primary,
     },
     emptyText: {
         fontSize: typography.size.base,
         color: colors.mutedForeground,
+        fontFamily: typography.fontFamily.default,
     },
 
     // --- Settings Panel Styles ---
@@ -208,11 +217,13 @@ export const getStyles = (colors: ThemeColors) => StyleSheet.create({
     settingTitle: {
         fontSize: typography.size.base,
         fontWeight: typography.weight.bold,
+        fontFamily: typography.fontFamily.bold,
         color: colors.foreground,
     },
     settingStatus: {
         fontSize: 10,
         fontWeight: typography.weight.bold,
+        fontFamily: typography.fontFamily.bold,
         textTransform: 'uppercase',
         letterSpacing: 0.5,
         color: colors.mutedForeground,
@@ -262,12 +273,14 @@ export const getStyles = (colors: ThemeColors) => StyleSheet.create({
     statValue: {
         fontSize: typography.size.xl,
         fontWeight: typography.weight.bold,
+        fontFamily: typography.fontFamily.bold,
         color: colors.foreground,
     },
     statLabel: {
         fontSize: typography.size.sm,
         color: colors.mutedForeground,
         fontWeight: typography.weight.semibold,
+        fontFamily: typography.fontFamily.semibold,
     },
     statDivider: {
         width: 1,
@@ -302,5 +315,6 @@ export const getStyles = (colors: ThemeColors) => StyleSheet.create({
         color: colors.primaryForeground,
         fontSize: typography.size.base,
         fontWeight: typography.weight.bold,
+        fontFamily: typography.fontFamily.bold,
     },
 });

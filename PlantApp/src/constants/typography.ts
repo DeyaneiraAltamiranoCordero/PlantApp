@@ -1,4 +1,9 @@
 export const typography = {
+    fontFamily: {
+        default: 'Nunito',
+        semibold: 'Nunito',
+        bold: 'Nunito',
+    },
     size: {
         sm: 12,
         base: 14,
@@ -12,3 +17,8 @@ export const typography = {
         bold: 'bold' as const,
     }
 };
+
+// helper function to get font family based on weight
+export function getFontFamily(weight: 'normal' | 'semibold' | 'bold' = 'normal'): string {
+    return 'Nunito';
+}

@@ -7,7 +7,8 @@ import { PersonalInfoForm } from "../../components/screenUserProfile/PersonalInf
 import { MyPlantsSection } from "../../components/screenUserProfile/MyPlantsSection";
 import { SettingsPanel } from "../../components/screenUserProfile/SettingsPanel";
 import { getStyles } from "./UserProfilestyles";
-import { lightTheme, darkTheme } from "../../theme/colors";
+// remove direct theme imports, we'll use the context
+import { useTheme } from "../../theme/ThemeContext";
 
 
 //TODO ESTO ES SOLO PARA VER INFORMACION PERO SE TIENE QUE CAMBIAR
@@ -29,12 +30,11 @@ export default function UserProfile() {
     // Array simulado de categorias seleccionadas
     const [plantCategories, setPlantCategories] = useState(["Suculentas", "Interior", "Aromáticas"]);
 
-    //si el perfil es privado o no y lo mismo con el modo oscuro y claro
+    //si el perfil es privado o no (se mantiene local) y el modo oscuro lo sacamos de context
     const [isPrivate, setIsPrivate] = useState(false);
-    const [isDark, setIsDark] = useState(false);
 
-    // Deducir el tema activo en base al estado de isDark
-    const theme = isDark ? darkTheme : lightTheme;
+    // obtener tema global y método para alternarlo
+    const { theme, isDark, toggleTheme } = useTheme();
     const styles = getStyles(theme);
 
     const handleImageChange = () => {
@@ -48,7 +48,13 @@ export default function UserProfile() {
     };
 
     return (
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <ScrollView
+            style={styles.container}
+            contentContainerStyle={[
+                styles.content,
+                { paddingBottom: styles.content.paddingBottom + 80 },
+            ]}
+        >
             <ProfileHeader
                 name={name}
                 nickname={nickname}
@@ -87,7 +93,7 @@ export default function UserProfile() {
                 isPrivate={isPrivate}
                 onPrivacyChange={setIsPrivate}
                 isDark={isDark}
-                onThemeChange={setIsDark}
+                onThemeChange={toggleTheme}
                 theme={theme}
             />
 

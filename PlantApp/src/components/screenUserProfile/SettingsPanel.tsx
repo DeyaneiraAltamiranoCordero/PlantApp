@@ -8,7 +8,8 @@ interface SettingsPanelProps {
     isPrivate: boolean;
     onPrivacyChange: (val: boolean) => void;
     isDark: boolean;
-    onThemeChange: (val: boolean) => void;
+    /** callback invoked when the user toggles dark mode; parameter is ignored */
+    onThemeChange: () => void;
     theme: ThemeColors;
 }
 
@@ -38,7 +39,7 @@ export function SettingsPanel({ isPrivate, onPrivacyChange, isDark, onThemeChang
                 </View>
                 <Switch
                     value={isDark}
-                    onValueChange={onThemeChange}
+                    onValueChange={() => onThemeChange()}
                     trackColor={{ false: theme.input, true: theme.primary }}
                     thumbColor={theme.card}
                     ios_backgroundColor={theme.input}

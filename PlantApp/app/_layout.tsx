@@ -1,9 +1,9 @@
 //_layout.tsx
 import React from "react";
-import { Stack } from "expo-router";
+import { Stack, Redirect } from "expo-router";
 
-// theme context handles color scheme and toggle state
 import { ThemeProvider, useTheme } from "../src/theme/ThemeContext";
+import { Slot } from "expo-router";
 
 function RootStack() {
   const { theme } = useTheme();
@@ -19,13 +19,18 @@ function RootStack() {
           backgroundColor: theme.background,
         },
       }}
-    />
+    >
+      {}
+      <Slot />
+    </Stack>
   );
 }
 
 export default function RootLayout() {
   return (
     <ThemeProvider>
+      {/* always redirect root to tabs/home */}
+      <Redirect href="/(tabs)/home" />
       <RootStack />
     </ThemeProvider>
   );
