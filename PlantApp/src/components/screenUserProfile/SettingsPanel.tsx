@@ -1,13 +1,12 @@
 import React from 'react';
 import { View, Text, Switch } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useProfileTheme } from '../../screens/userProfile/UserProfilestyles';
+import { useProfileTheme } from '../../screens/userProfile/UserProfile.styles';
 
 interface SettingsPanelProps {
     isPrivate: boolean;
     onPrivacyChange: (val: boolean) => void;
     isDark: boolean;
-    /** callback invoked when the user toggles dark mode; parameter is ignored */
     onThemeChange: () => void;
 }
 

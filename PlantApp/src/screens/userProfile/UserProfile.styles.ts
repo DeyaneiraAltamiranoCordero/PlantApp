@@ -11,7 +11,7 @@ export const createUserStyle = (theme: AppTheme) =>
         content: {
             padding: theme.spacing.xl,
             paddingTop: theme.spacing.huge,
-            paddingBottom: theme.spacing.huge,
+            paddingBottom: theme.spacing.huge + 80,
         },
 
         // Encabezado del perfil
@@ -160,7 +160,7 @@ export const createUserStyle = (theme: AppTheme) =>
             flexDirection: 'row',
             alignItems: 'center',
             gap: theme.spacing.xs,
-            backgroundColor: theme.colors.primary + '20', // Opacidad añadida en HEX
+            backgroundColor: theme.colors.primary + '20', // Opacidad 
             paddingHorizontal: theme.spacing.md,
             paddingVertical: theme.spacing.xs,
             borderRadius: 16,
@@ -186,6 +186,7 @@ export const createUserStyle = (theme: AppTheme) =>
             borderRadius: theme.spacing.lg,
             paddingHorizontal: theme.spacing.lg,
             paddingVertical: theme.spacing.lg,
+            marginBottom: theme.spacing.md,
         },
         settingInfo: {
             flexDirection: 'row',
@@ -285,9 +286,9 @@ export const createUserStyle = (theme: AppTheme) =>
             height: 30,
             backgroundColor: theme.colors.border,
         },
-
-        // acciones
-    
+        saveButtonContainer: {
+            marginTop: theme.spacing.xl,
+        },
     });
 
 //función para crear los estilos de cada modo (claro/oscuro)

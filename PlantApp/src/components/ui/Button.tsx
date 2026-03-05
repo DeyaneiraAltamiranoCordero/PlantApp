@@ -1,7 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, ActivityIndicator, ViewStyle, TextStyle, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useProfileTheme } from '../../screens/userProfile/UserProfilestyles';
+import { useProfileTheme } from '../../screens/userProfile/UserProfile.styles';
 
 interface ButtonProps {
     title: string;

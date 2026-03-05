@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TextInput } from 'react-native';
 import { Feather, FontAwesome5 } from '@expo/vector-icons';
-import { useProfileTheme } from '../../screens/userProfile/UserProfilestyles';
+import { useProfileTheme } from '../../screens/userProfile/UserProfile.styles';
 
 interface MyPlantsSectionProps {
     favoritePlant: string;

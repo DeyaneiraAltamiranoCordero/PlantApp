@@ -1,8 +1,7 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
-import { AppTheme } from '../../theme/desingSystem';
 import { Feather } from '@expo/vector-icons';
-import { useProfileTheme } from '../../screens/userProfile/UserProfilestyles';
+import { useProfileTheme } from '../../screens/userProfile/UserProfile.styles';
 
 interface ProfileHeaderProps {
     name: string;

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ScrollView, Alert } from "react-native";
+import { ScrollView, Alert, View } from "react-native";
 import { Button } from "../../components/ui/Button";
 import { ProfileHeader } from "../../components/screenUserProfile/ProfileHeader";
 import { StatsBar } from "../../components/screenUserProfile/StatsBar";
@@ -7,8 +7,7 @@ import { PersonalInfoForm } from "../../components/screenUserProfile/PersonalInf
 import { MyPlantsSection } from "../../components/screenUserProfile/MyPlantsSection";
 import { SettingsPanel } from "../../components/screenUserProfile/SettingsPanel";
 import { useTheme } from "../../theme/desingSystem";
-import { useProfileTheme } from "./UserProfilestyles";
-
+import { useProfileTheme } from "./UserProfile.styles";
 
 //TODO ESTO ES SOLO PARA VER INFORMACION PERO SE TIENE QUE CAMBIAR
 export default function UserProfile() {
@@ -97,6 +96,7 @@ export default function UserProfile() {
                 icon="check-circle"
                 variant="primary"
                 size="md"
+                style={styles.saveButtonContainer}
             />
         </ScrollView>
     );

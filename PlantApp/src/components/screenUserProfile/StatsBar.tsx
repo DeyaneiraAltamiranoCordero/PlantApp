@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useProfileTheme } from '../../screens/userProfile/UserProfilestyles';
+import { useProfileTheme } from '../../screens/userProfile/UserProfile.styles';
 
 interface StatsBarProps {
     plants: number;
@@ -10,7 +10,7 @@ interface StatsBarProps {
 }
 
 export function StatsBar({ plants, streak, friends }: StatsBarProps) {
-    const { theme, styles } = useProfileTheme();
+    const { styles } = useProfileTheme();
 
     return (
         <View style={styles.statsCard}>

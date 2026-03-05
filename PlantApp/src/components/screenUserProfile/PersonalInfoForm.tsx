@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TextInput } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useProfileTheme } from '../../screens/userProfile/UserProfilestyles';
+import { useProfileTheme } from '../../screens/userProfile/UserProfile.styles';
 
 interface PersonalInfoFormProps {
     name: string;
@@ -21,7 +21,7 @@ interface FormFieldProps {
 }
 
 function FormField({ iconName, label, children }: FormFieldProps) {
-    const { theme, styles } = useProfileTheme();
+    const { styles } = useProfileTheme();
     return (
         <View style={styles.fieldContainer}>
             <View style={styles.labelContainer}>
