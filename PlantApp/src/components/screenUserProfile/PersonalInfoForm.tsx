@@ -1,8 +1,7 @@
 import React from 'react';
 import { View, Text, TextInput } from 'react-native';
-import { ThemeColors } from '../../theme/colors';
 import { Feather } from '@expo/vector-icons';
-import { getStyles } from '../../screens/userProfile/UserProfilestyles';
+import { useProfileTheme } from '../../screens/userProfile/UserProfilestyles';
 
 interface PersonalInfoFormProps {
     name: string;
@@ -13,18 +12,16 @@ interface PersonalInfoFormProps {
     onNicknameChange: (val: string) => void;
     onBirthdayChange: (val: string) => void;
     onDescriptionChange: (val: string) => void;
-    theme: ThemeColors;
 }
 
 interface FormFieldProps {
     iconName: keyof typeof Feather.glyphMap;
     label: string;
     children: React.ReactNode;
-    theme: ThemeColors;
 }
 
-function FormField({ iconName, label, children, theme }: FormFieldProps) {
-    const styles = getStyles(theme);
+function FormField({ iconName, label, children }: FormFieldProps) {
+    const { theme, styles } = useProfileTheme();
     return (
         <View style={styles.fieldContainer}>
             <View style={styles.labelContainer}>
@@ -44,51 +41,50 @@ export function PersonalInfoForm({
     onNameChange,
     onNicknameChange,
     onBirthdayChange,
-    onDescriptionChange,
-    theme
+    onDescriptionChange
 }: PersonalInfoFormProps) {
-    const styles = getStyles(theme);
+    const { theme, styles } = useProfileTheme();
 
     return (
-        //Forms para la información personal del usuario
         <View style={styles.formCard}>
+            {/* Información personal del usuario */}
             <Text style={styles.formTitle}>Información del Usuario</Text>
 
-            <FormField iconName="user" label="Nombre" theme={theme}>
+            <FormField iconName="user" label="Nombre">
                 <TextInput
                     style={styles.input}
                     placeholder="Tu nombre completo"
-                    placeholderTextColor={theme.mutedForeground}
+                    placeholderTextColor={theme.colors.mutedForeground}
                     value={name}
                     onChangeText={onNameChange}
                 />
             </FormField>
 
-            <FormField iconName="at-sign" label="Apodo" theme={theme}>
+            <FormField iconName="at-sign" label="Apodo">
                 <TextInput
                     style={styles.input}
                     placeholder="Tu apodo"
-                    placeholderTextColor={theme.mutedForeground}
+                    placeholderTextColor={theme.colors.mutedForeground}
                     value={nickname}
                     onChangeText={onNicknameChange}
                 />
             </FormField>
 
-            <FormField iconName="calendar" label="Cumpleaños" theme={theme}>
+            <FormField iconName="calendar" label="Cumpleaños">
                 <TextInput
                     style={styles.input}
                     placeholder="YYYY-MM-DD"
-                    placeholderTextColor={theme.mutedForeground}
+                    placeholderTextColor={theme.colors.mutedForeground}
                     value={birthday}
                     onChangeText={onBirthdayChange}
                 />
             </FormField>
 
-            <FormField iconName="file-text" label="Descripción" theme={theme}>
+            <FormField iconName="file-text" label="Descripción">
                 <TextInput
                     style={[styles.input, styles.textArea]}
                     placeholder="Cuéntanos sobre ti y tu amor por las plantas..."
-                    placeholderTextColor={theme.mutedForeground}
+                    placeholderTextColor={theme.colors.mutedForeground}
                     value={description}
                     onChangeText={onDescriptionChange}
                     multiline

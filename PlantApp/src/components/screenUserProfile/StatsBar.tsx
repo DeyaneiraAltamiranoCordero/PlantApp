@@ -1,18 +1,16 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ThemeColors } from '../../theme/colors';
-import { getStyles } from '../../screens/userProfile/UserProfilestyles';
+import { useProfileTheme } from '../../screens/userProfile/UserProfilestyles';
 
 interface StatsBarProps {
     plants: number;
     streak: number;
     friends: number;
-    theme: ThemeColors;
 }
 
-export function StatsBar({ plants, streak, friends, theme }: StatsBarProps) {
-    const styles = getStyles(theme);
+export function StatsBar({ plants, streak, friends }: StatsBarProps) {
+    const { theme, styles } = useProfileTheme();
 
     return (
         <View style={styles.statsCard}>

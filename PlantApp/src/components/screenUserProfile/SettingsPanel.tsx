@@ -1,8 +1,7 @@
 import React from 'react';
 import { View, Text, Switch } from 'react-native';
-import { ThemeColors } from '../../theme/colors';
 import { Feather } from '@expo/vector-icons';
-import { getStyles } from '../../screens/userProfile/UserProfilestyles';
+import { useProfileTheme } from '../../screens/userProfile/UserProfilestyles';
 
 interface SettingsPanelProps {
     isPrivate: boolean;
@@ -10,11 +9,10 @@ interface SettingsPanelProps {
     isDark: boolean;
     /** callback invoked when the user toggles dark mode; parameter is ignored */
     onThemeChange: () => void;
-    theme: ThemeColors;
 }
 
-export function SettingsPanel({ isPrivate, onPrivacyChange, isDark, onThemeChange, theme }: SettingsPanelProps) {
-    const styles = getStyles(theme);
+export function SettingsPanel({ isPrivate, onPrivacyChange, isDark, onThemeChange }: SettingsPanelProps) {
+    const { theme, styles } = useProfileTheme();
 
     return (
         <View style={styles.formCard}>
@@ -25,9 +23,9 @@ export function SettingsPanel({ isPrivate, onPrivacyChange, isDark, onThemeChang
                 <View style={styles.settingInfo}>
                     <View style={styles.settingIconWrapper}>
                         {isDark ? (
-                            <Feather name="moon" size={20} color={theme.secondaryForeground} />
+                            <Feather name="moon" size={20} color={theme.colors.secondaryForeground} />
                         ) : (
-                            <Feather name="sun" size={20} color={theme.mutedForeground} />
+                            <Feather name="sun" size={20} color={theme.colors.mutedForeground} />
                         )}
                     </View>
                     <View>
@@ -40,9 +38,9 @@ export function SettingsPanel({ isPrivate, onPrivacyChange, isDark, onThemeChang
                 <Switch
                     value={isDark}
                     onValueChange={() => onThemeChange()}
-                    trackColor={{ false: theme.input, true: theme.primary }}
-                    thumbColor={theme.card}
-                    ios_backgroundColor={theme.input}
+                    trackColor={{ false: theme.colors.input, true: theme.colors.primary }}
+                    thumbColor={theme.colors.card}
+                    ios_backgroundColor={theme.colors.input}
                 />
             </View>
 
@@ -66,9 +64,9 @@ export function SettingsPanel({ isPrivate, onPrivacyChange, isDark, onThemeChang
                 <Switch
                     value={isPrivate}
                     onValueChange={onPrivacyChange}
-                    trackColor={{ false: theme.input, true: theme.primary }}
-                    thumbColor={theme.card}
-                    ios_backgroundColor={theme.input}
+                    trackColor={{ false: theme.colors.input, true: theme.colors.primary }}
+                    thumbColor={theme.colors.card}
+                    ios_backgroundColor={theme.colors.input}
                 />
             </View>
         </View>

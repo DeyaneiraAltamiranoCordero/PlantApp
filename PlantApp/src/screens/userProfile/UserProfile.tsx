@@ -1,14 +1,13 @@
 import React, { useState } from "react";
-import { ScrollView, TouchableOpacity, Text, Alert } from "react-native";
-import { Feather } from '@expo/vector-icons';
+import { ScrollView, Alert } from "react-native";
+import { Button } from "../../components/ui/Button";
 import { ProfileHeader } from "../../components/screenUserProfile/ProfileHeader";
 import { StatsBar } from "../../components/screenUserProfile/StatsBar";
 import { PersonalInfoForm } from "../../components/screenUserProfile/PersonalInfoForm";
 import { MyPlantsSection } from "../../components/screenUserProfile/MyPlantsSection";
 import { SettingsPanel } from "../../components/screenUserProfile/SettingsPanel";
-import { getStyles } from "./UserProfilestyles";
-// remove direct theme imports, we'll use the context
-import { useTheme } from "../../theme/ThemeContext";
+import { useTheme } from "../../theme/desingSystem";
+import { useProfileTheme } from "./UserProfilestyles";
 
 
 //TODO ESTO ES SOLO PARA VER INFORMACION PERO SE TIENE QUE CAMBIAR
@@ -34,8 +33,8 @@ export default function UserProfile() {
     const [isPrivate, setIsPrivate] = useState(false);
 
     // obtener tema global y método para alternarlo
-    const { theme, isDark, toggleTheme } = useTheme();
-    const styles = getStyles(theme);
+    const { theme: profileTheme, styles } = useProfileTheme();
+    const { isDark, toggleTheme } = useTheme();
 
     const handleImageChange = () => {
         // lógica para abrir la cámara o galería
@@ -60,14 +59,12 @@ export default function UserProfile() {
                 nickname={nickname}
                 imageUrl={profileImage}
                 onImageChange={handleImageChange}
-                theme={theme}
             />
 
             <StatsBar
                 plants={plantsCount}
                 streak={streakCount}
                 friends={friendsCount}
-                theme={theme}
             />
 
             <PersonalInfoForm
@@ -79,14 +76,12 @@ export default function UserProfile() {
                 onNicknameChange={setNickname}
                 onBirthdayChange={setBirthday}
                 onDescriptionChange={setDescription}
-                theme={theme}
             />
 
             <MyPlantsSection
                 favoritePlant={favoritePlant}
                 plantCategories={plantCategories}
                 onFavoritePlantChange={setFavoritePlant}
-                theme={theme}
             />
 
             <SettingsPanel
@@ -94,18 +89,15 @@ export default function UserProfile() {
                 onPrivacyChange={setIsPrivate}
                 isDark={isDark}
                 onThemeChange={toggleTheme}
-                theme={theme}
             />
 
-            {/* Save Button */}
-            <TouchableOpacity
-                style={styles.saveButton}
+            <Button
+                title="Guardar Cambios"
                 onPress={handleSaveChanges}
-                activeOpacity={0.8}
-            >
-                <Feather name="check-circle" size={18} color={theme.primaryForeground} />
-                <Text style={styles.saveButtonText}>Guardar Cambios</Text>
-            </TouchableOpacity>
+                icon="check-circle"
+                variant="primary"
+                size="md"
+            />
         </ScrollView>
     );
 }

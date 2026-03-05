@@ -1,23 +1,20 @@
 import React from 'react';
 import { View, Text, TextInput } from 'react-native';
-import { ThemeColors } from '../../theme/colors';
 import { Feather, FontAwesome5 } from '@expo/vector-icons';
-import { getStyles } from '../../screens/userProfile/UserProfilestyles';
+import { useProfileTheme } from '../../screens/userProfile/UserProfilestyles';
 
 interface MyPlantsSectionProps {
     favoritePlant: string;
     plantCategories: string[];
     onFavoritePlantChange: (val: string) => void;
-    theme: ThemeColors;
 }
 
 export function MyPlantsSection({
     favoritePlant,
     plantCategories,
-    onFavoritePlantChange,
-    theme
+    onFavoritePlantChange
 }: MyPlantsSectionProps) {
-    const styles = getStyles(theme);
+    const { theme, styles } = useProfileTheme();
 
     return (
         <View style={styles.formCard}>
@@ -35,7 +32,7 @@ export function MyPlantsSection({
                 <TextInput
                     style={styles.input}
                     placeholder="Ej: Monstera Deliciosa"
-                    placeholderTextColor={theme.mutedForeground}
+                    placeholderTextColor={theme.colors.mutedForeground}
                     value={favoritePlant}
                     onChangeText={onFavoritePlantChange}
                 />

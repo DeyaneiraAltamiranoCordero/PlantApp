@@ -2,7 +2,7 @@
 import React from "react";
 import { Stack, Redirect } from "expo-router";
 
-import { ThemeProvider, useTheme } from "../src/theme/ThemeContext";
+import { ThemeProvider, useTheme } from "../src/theme/desingSystem";
 import { Slot } from "expo-router";
 
 function RootStack() {
@@ -12,11 +12,11 @@ function RootStack() {
       screenOptions={{
         title: "Flora",
         headerStyle: {
-          backgroundColor: theme.background,
+          backgroundColor: theme.colors.background,
         },
-        headerTintColor: theme.foreground,
+        headerTintColor: theme.colors.foreground,
         contentStyle: {
-          backgroundColor: theme.background,
+          backgroundColor: theme.colors.background,
         },
       }}
     >

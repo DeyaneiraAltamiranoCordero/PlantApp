@@ -1,19 +1,18 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
-import { ThemeColors } from '../../theme/colors';
+import { AppTheme } from '../../theme/desingSystem';
 import { Feather } from '@expo/vector-icons';
-import { getStyles } from '../../screens/userProfile/UserProfilestyles';
+import { useProfileTheme } from '../../screens/userProfile/UserProfilestyles';
 
 interface ProfileHeaderProps {
     name: string;
     nickname: string;
     imageUrl: string;
     onImageChange: () => void;
-    theme: ThemeColors;
 }
 
-export function ProfileHeader({ name, nickname, imageUrl, onImageChange, theme }: ProfileHeaderProps) {
-    const styles = getStyles(theme);
+export function ProfileHeader({ name, nickname, imageUrl, onImageChange }: ProfileHeaderProps) {
+    const { theme, styles } = useProfileTheme();
     const initial = name ? name.charAt(0).toUpperCase() : '?';
 
     return (
@@ -34,7 +33,7 @@ export function ProfileHeader({ name, nickname, imageUrl, onImageChange, theme }
                     onPress={onImageChange}
                     activeOpacity={0.8}
                 >
-                    <Feather name="camera" size={16} color={theme.primaryForeground} />
+                    <Feather name="camera" size={16} color={theme.colors.primaryForeground} />
                 </TouchableOpacity>
             </View>
 

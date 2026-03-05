@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { useTheme } from '../../src/theme/ThemeContext';
+import { useTheme } from '../../src/theme/desingSystem';
 
 export default function TabLayout() {
   const { theme } = useTheme();
@@ -11,10 +11,10 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,
-        tabBarActiveTintColor: theme.destructiveForeground ,
-        tabBarInactiveTintColor: theme.mutedForeground,
+        tabBarActiveTintColor: theme.colors.tertiary,
+        tabBarInactiveTintColor: theme.colors.mutedForeground,
         tabBarStyle: {
-          backgroundColor: theme.card,
+          backgroundColor: theme.colors.card,
           position: 'absolute',
           left: 0,
           right: 0,
