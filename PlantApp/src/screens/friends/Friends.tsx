@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 
-export default function PlantCareScreen() {
+export default function FriendsScreen() {
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Text>Cuidado de Plantas</Text>
+      <Text>Amigos</Text>
     </View>
   );
 }
