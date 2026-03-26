@@ -9,7 +9,8 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.flora.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -17,14 +18,14 @@
         "foregroundImage": "./assets/images/hojas.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.flora.app"
     },
     "web": {
       "output": "static",
       "favicon": "./assets/images/hojas.png"
     },
     "plugins": [
-      "expo-router",
       [
         "expo-splash-screen",
         {
@@ -41,6 +42,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "95f400b1-09b5-4d5f-ace7-fe18069ff8a7"
+      }
     }
   }
 }
