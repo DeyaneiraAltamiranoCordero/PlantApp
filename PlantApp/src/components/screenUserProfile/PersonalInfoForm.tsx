@@ -1,36 +1,19 @@
 import React from 'react';
-import { View, Text, TextInput } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { View, Text } from 'react-native';
 import { useProfileTheme } from '../../screens/userProfile/UserProfile.styles';
+import { Input } from '../ui/Input';
 
 interface PersonalInfoFormProps {
     name: string;
     nickname: string;
     birthday: string;
     description: string;
+    bibliography: string;
     onNameChange: (val: string) => void;
     onNicknameChange: (val: string) => void;
     onBirthdayChange: (val: string) => void;
     onDescriptionChange: (val: string) => void;
-}
-
-interface FormFieldProps {
-    iconName: keyof typeof Feather.glyphMap;
-    label: string;
-    children: React.ReactNode;
-}
-
-function FormField({ iconName, label, children }: FormFieldProps) {
-    const { styles } = useProfileTheme();
-    return (
-        <View style={styles.fieldContainer}>
-            <View style={styles.labelContainer}>
-                <Feather name={iconName} size={16} color={styles.unifiedIcon.color} />
-                <Text style={styles.label}>{label}</Text>
-            </View>
-            {children}
-        </View>
-    );
+    onBibliographyChange: (val: string) => void;
 }
 
 export function PersonalInfoForm({
@@ -38,60 +21,60 @@ export function PersonalInfoForm({
     nickname,
     birthday,
     description,
+    bibliography,
     onNameChange,
     onNicknameChange,
     onBirthdayChange,
-    onDescriptionChange
+    onDescriptionChange,
+    onBibliographyChange
 }: PersonalInfoFormProps) {
-    const { theme, styles } = useProfileTheme();
+    const { styles } = useProfileTheme();
 
     return (
         <View style={styles.formCard}>
-            {/* Información personal del usuario */}
             <Text style={styles.formTitle}>Información del Usuario</Text>
 
-            <FormField iconName="user" label="Nombre">
-                <TextInput
-                    style={styles.input}
-                    placeholder="Tu nombre completo"
-                    placeholderTextColor={theme.colors.mutedForeground}
-                    value={name}
-                    onChangeText={onNameChange}
-                />
-            </FormField>
+            <Input
+                label="Nombre"
+                iconName="user"
+                placeholder="Tu nombre completo"
+                value={name}
+                onChangeText={onNameChange}
+            />
 
-            <FormField iconName="at-sign" label="Apodo">
-                <TextInput
-                    style={styles.input}
-                    placeholder="Tu apodo"
-                    placeholderTextColor={theme.colors.mutedForeground}
-                    value={nickname}
-                    onChangeText={onNicknameChange}
-                />
-            </FormField>
+            <Input
+                label="Apodo"
+                iconName="at-sign"
+                placeholder="Tu apodo"
+                value={nickname}
+                onChangeText={onNicknameChange}
+            />
 
-            <FormField iconName="calendar" label="Cumpleaños">
-                <TextInput
-                    style={styles.input}
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor={theme.colors.mutedForeground}
-                    value={birthday}
-                    onChangeText={onBirthdayChange}
-                />
-            </FormField>
+            <Input
+                label="Cumpleaños"
+                iconName="calendar"
+                placeholder="YYYY-MM-DD"
+                value={birthday}
+                onChangeText={onBirthdayChange}
+            />
 
-            <FormField iconName="file-text" label="Descripción">
-                <TextInput
-                    style={[styles.input, styles.textArea]}
-                    placeholder="Cuéntanos sobre ti y tu amor por las plantas..."
-                    placeholderTextColor={theme.colors.mutedForeground}
-                    value={description}
-                    onChangeText={onDescriptionChange}
-                    multiline
-                    numberOfLines={4}
-                    textAlignVertical="top"
-                />
-            </FormField>
+            <Input
+                label="Descripción"
+                iconName="file-text"
+                placeholder="Cuéntanos sobre ti y tu amor por las plantas..."
+                value={description}
+                onChangeText={onDescriptionChange}
+                multiline
+            />
+
+            <Input
+                label="Bibliografía"
+                iconName="book"
+                placeholder="Enlaces, fuentes o libros recomendados..."
+                value={bibliography}
+                onChangeText={onBibliographyChange}
+                multiline
+            />
         </View>
     );
 }

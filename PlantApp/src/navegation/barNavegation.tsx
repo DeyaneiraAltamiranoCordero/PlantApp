@@ -5,7 +5,9 @@ import HomeScreen from '../screens/home/Home';
 import ProfileScreen from '../screens/userProfile/UserProfile';
 import PlantCareScreen from '../screens/plantCare/PlantCare';
 import FriendsScreen from '../screens/friends/Friends';
+import ScannerScreen from '../screens/scanner/ScannerScreen';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { View } from 'react-native';
 
 const Tab = createBottomTabNavigator();
 
@@ -46,6 +48,30 @@ export default function TabNavigator() {
                 options={{
                     tabBarIcon: ({ color, size }) => (
                         <MaterialCommunityIcons name="sprout" size={size} color={color} />
+                    ),
+                }}
+            />
+            <Tab.Screen
+                name="Scanner"
+                component={ScannerScreen}
+                options={{
+                    tabBarIcon: ({ color, size }) => (
+                        <View style={{
+                            top: -15,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            backgroundColor: theme.colors.primary,
+                            width: 60,
+                            height: 60,
+                            borderRadius: 30,
+                            elevation: 5,
+                            shadowColor: theme.colors.primary,
+                            shadowOffset: { width: 0, height: 4 },
+                            shadowOpacity: 0.3,
+                            shadowRadius: 4,
+                        }}>
+                            <MaterialCommunityIcons name="line-scan" size={32} color="#FFFFFF" />
+                        </View>
                     ),
                 }}
             />

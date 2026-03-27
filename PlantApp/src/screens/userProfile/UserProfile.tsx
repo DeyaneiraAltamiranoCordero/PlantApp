@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ScrollView, Alert, View } from "react-native";
 import { Button } from "../../components/ui/Button";
 import { ProfileHeader } from "../../components/screenUserProfile/ProfileHeader";
@@ -8,32 +8,59 @@ import { MyPlantsSection } from "../../components/screenUserProfile/MyPlantsSect
 import { SettingsPanel } from "../../components/screenUserProfile/SettingsPanel";
 import { useTheme } from "../../theme/desingSystem";
 import { useProfileTheme } from "./UserProfile.styles";
+import { useAuth } from "../../hooks/useAuth";
+import firestore from '@react-native-firebase/firestore';
 
-//TODO ESTO ES SOLO PARA VER INFORMACION PERO SE TIENE QUE CAMBIAR
 export default function UserProfile() {
-    // Estados para los datos del usuario
-    const [name, setName] = useState("Deya Cordero");
-    const [nickname, setNickname] = useState("cactus");
-    const [profileImage, setProfileImage] = useState("");
-    const [birthday, setBirthday] = useState("1998-05-12");
-    const [description, setDescription] = useState("Amante de las suculentas y coleccionista de plantas flotantes.");
+    const { currentUser } = useAuth();
 
-    // Datos de las estadisticas de plantas, amigos y racha
-    const [plantsCount, setPlantsCount] = useState(12);
-    const [streakCount, setStreakCount] = useState(30);
-    const [friendsCount, setFriendsCount] = useState(24);
+    // Estados para los datos del usuario (ahora vacíos inicialmente)
+    const [name, setName] = useState("");
+    const [nickname, setNickname] = useState("");
+    const [profileImage, setProfileImage] = useState("");
+    const [birthday, setBirthday] = useState("");
+    const [description, setDescription] = useState("");
+    const [bibliography, setBibliography] = useState("");
+
+    // Datos de las estadisticas
+    const [plantsCount, setPlantsCount] = useState(0);
+    const [streakCount, setStreakCount] = useState(0);
+    const [friendsCount, setFriendsCount] = useState(0);
 
     // Estados de Mis Plantas
     const [favoritePlant, setFavoritePlant] = useState("Filodendro corazón");
-    // Array simulado de categorias seleccionadas
     const [plantCategories, setPlantCategories] = useState(["Suculentas", "Interior", "Aromáticas"]);
 
-    //si el perfil es privado o no (se mantiene local) y el modo oscuro lo sacamos de context
     const [isPrivate, setIsPrivate] = useState(false);
 
-    // obtener tema global y método para alternarlo
     const { theme: profileTheme, styles } = useProfileTheme();
     const { isDark, toggleTheme } = useTheme();
+
+    // Efecto para sincronizar con Firestore
+    useEffect(() => {
+        if (!currentUser) return;
+
+        const subscriber = firestore()
+            .collection('users')
+            .doc(currentUser.uid)
+            .onSnapshot(documentSnapshot => {
+                if (documentSnapshot.exists()) {
+                    const data = documentSnapshot.data();
+                    if (data) {
+                        setName(data.name || "");
+                        setNickname(data.nickname || "");
+                        setProfileImage(data.profilePicture || "");
+                        setPlantsCount(data.plantCount || 0);
+                        setStreakCount(data.streak || 0);
+                        setDescription(data.description || "");
+                        setBibliography(data.bibliography || "");
+                        if (data.birthDate) setBirthday(data.birthDate);
+                    }
+                }
+            });
+
+        return () => subscriber();
+    }, [currentUser]);
 
     const handleImageChange = () => {
         // lógica para abrir la cámara o galería
@@ -71,10 +98,12 @@ export default function UserProfile() {
                 nickname={nickname}
                 birthday={birthday}
                 description={description}
+                bibliography={bibliography}
                 onNameChange={setName}
                 onNicknameChange={setNickname}
                 onBirthdayChange={setBirthday}
                 onDescriptionChange={setDescription}
+                onBibliographyChange={setBibliography}
             />
 
             <MyPlantsSection
