@@ -7,15 +7,15 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "googleServicesFile": "./google-services.json"
+      "env": {
+        "GOOGLE_SERVICES_JSON": "@project:GOOGLE_SERVICES_JSON"
+      }
     },
     "preview": {
-      "distribution": "internal",
-      "googleServicesFile": "./google-services.json"
+      "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true,
-      "googleServicesFile": "./google-services.json"
+      "autoIncrement": true
     }
   },
   "submit": {
