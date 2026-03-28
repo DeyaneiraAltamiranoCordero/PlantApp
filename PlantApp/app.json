@@ -1,11 +1,11 @@
 {
   "expo": {
     "name": "PlantApp",
-    "slug": "PlantApp",
+    "slug": "flora-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/hojas.png",
-    "scheme": "plantapp",
+    "scheme": "com.flora.app",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
