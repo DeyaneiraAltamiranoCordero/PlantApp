@@ -39,7 +39,7 @@ export default function UserProfile() {
             .collection('users')
             .doc(currentUser.uid)
             .onSnapshot((documentSnapshot) => {
-                if (documentSnapshot.exists) {
+                if (documentSnapshot.exists()) {
                     const data = documentSnapshot.data();
                     if (data) {
                         setName(data.name || "");
@@ -159,7 +159,7 @@ export default function UserProfile() {
                 <Button
                     title="Cerrar sesión"
                     onPress={handleSignOut}
-                    icon="logout"
+                    icon="log-out"
                     variant="secondary"
                     size="md"
                     style={{ flex: 1 }}

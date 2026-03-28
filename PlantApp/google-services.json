@@ -7,18 +7,18 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:671777128731:android:b1f0d9da0e184c969093be",
+        "mobilesdk_app_id": "1:671777128731:android:8c2a74c9a3559e969093be",
         "android_client_info": {
           "package_name": "com.plantapp"
         }
       },
       "oauth_client": [
         {
-          "client_id": "671777128731-klcc9osjo627auks2l8vq3v8oiglbpb2.apps.googleusercontent.com",
+          "client_id": "671777128731-7vbe72qpfs5p21f7mg5e1e47jp0njsnr.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.plantapp",
-            "certificate_hash": "23e882c45dbef892efd80592dde5e8608fb09a06"
+            "certificate_hash": "5704326d0f77e8461f66b1b1ca59fe71e093d5f5"
           }
         },
         {
