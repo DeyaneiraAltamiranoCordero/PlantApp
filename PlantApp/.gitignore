@@ -36,11 +36,10 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# Firebase
+
 app-example
 
 # generated native folders
 /ios
 /android
-
-# Allow google-services.json for EAS Build
-!google-services.json

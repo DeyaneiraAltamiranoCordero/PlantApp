@@ -13,7 +13,7 @@ export function useAuth() {
     const [loading, setLoading] = useState(true);
     const [request, response, promptAsync] = Google.useAuthRequest({
         clientId: '671777128731-ng6r50hcbatkbi5objkpchphs92v6ml6.apps.googleusercontent.com', // Android Client ID
-        redirectUrl: AuthSession.getRedirectUrl(),
+        redirectUri: AuthSession.getRedirectUrl(),
     });
 
     const syncUserToFirestore = async (user: User) => {
