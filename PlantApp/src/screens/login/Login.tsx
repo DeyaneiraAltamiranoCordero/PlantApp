@@ -1,23 +1,16 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { ActivityIndicator, Alert, Text, View } from 'react-native';
 import { Button } from '../../components/ui/Button';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../context/AuthContext';
 import { useLoginTheme } from './Login.styles';
 
-export default function LoginScreen({ navigation }: any) {
-  const { signInWithGoogle, currentUser, loading } = useAuth();
+export default function LoginScreen() {
+  const { signInWithGoogle, loading } = useAuth();
   const { styles } = useLoginTheme();
-
-  // Navegar a Main cuando hay usuario autenticado
-  useEffect(() => {
-    if (currentUser) {
-      navigation.navigate('Main');
-    }
-  }, [currentUser]);
 
   if (loading) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}> 
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color={styles.title.color} />
       </View>
     );
@@ -26,16 +19,14 @@ export default function LoginScreen({ navigation }: any) {
   const handleGoogleSignIn = async () => {
     try {
       await signInWithGoogle();
-    } catch (error: any) {
-      console.error('Error al iniciar sesión con Google:', error);
-      Alert.alert('Error', 'No se pudo iniciar sesión con Google. Por favor, intenta de nuevo.');
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo iniciar sesión con Google. Intentá de nuevo.');
     }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Bienvenido</Text>
-      
       <View style={styles.buttonContainer}>
         <Button
           title="Continuar con Google"
