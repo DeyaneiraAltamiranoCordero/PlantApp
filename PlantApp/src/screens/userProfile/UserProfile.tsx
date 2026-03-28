@@ -1,18 +1,21 @@
+import { useNavigation } from '@react-navigation/native';
+import { doc, onSnapshot } from 'firebase/firestore';
 import React, { useEffect, useState } from "react";
-import { ScrollView, Alert, View } from "react-native";
-import { Button } from "../../components/ui/Button";
-import { ProfileHeader } from "../../components/screenUserProfile/ProfileHeader";
-import { StatsBar } from "../../components/screenUserProfile/StatsBar";
-import { PersonalInfoForm } from "../../components/screenUserProfile/PersonalInfoForm";
+import { Alert, ScrollView, View } from "react-native";
 import { MyPlantsSection } from "../../components/screenUserProfile/MyPlantsSection";
+import { PersonalInfoForm } from "../../components/screenUserProfile/PersonalInfoForm";
+import { ProfileHeader } from "../../components/screenUserProfile/ProfileHeader";
 import { SettingsPanel } from "../../components/screenUserProfile/SettingsPanel";
+import { StatsBar } from "../../components/screenUserProfile/StatsBar";
+import { Button } from "../../components/ui/Button";
+import { db } from '../../config/firebase';
+import { useAuth } from "../../hooks/useAuth";
 import { useTheme } from "../../theme/desingSystem";
 import { useProfileTheme } from "./UserProfile.styles";
-import { useAuth } from "../../hooks/useAuth";
-import firestore from '@react-native-firebase/firestore';
 
 export default function UserProfile() {
-    const { currentUser } = useAuth();
+    const { currentUser, signOut } = useAuth();
+    const navigation = useNavigation();
 
     // Estados para los datos del usuario (ahora vacíos inicialmente)
     const [name, setName] = useState("");
@@ -40,26 +43,23 @@ export default function UserProfile() {
     useEffect(() => {
         if (!currentUser) return;
 
-        const subscriber = firestore()
-            .collection('users')
-            .doc(currentUser.uid)
-            .onSnapshot(documentSnapshot => {
-                if (documentSnapshot.exists()) {
-                    const data = documentSnapshot.data();
-                    if (data) {
-                        setName(data.name || "");
-                        setNickname(data.nickname || "");
-                        setProfileImage(data.profilePicture || "");
-                        setPlantsCount(data.plantCount || 0);
-                        setStreakCount(data.streak || 0);
-                        setDescription(data.description || "");
-                        setBibliography(data.bibliography || "");
-                        if (data.birthDate) setBirthday(data.birthDate);
-                    }
+        const unsubscribe = onSnapshot(doc(db, 'users', currentUser.uid), (documentSnapshot) => {
+            if (documentSnapshot.exists()) {
+                const data = documentSnapshot.data();
+                if (data) {
+                    setName(data.name || "");
+                    setNickname(data.nickname || "");
+                    setProfileImage(data.profilePicture || "");
+                    setPlantsCount(data.plantCount || 0);
+                    setStreakCount(data.streak || 0);
+                    setDescription(data.description || "");
+                    setBibliography(data.bibliography || "");
+                    if (data.birthDate) setBirthday(data.birthDate);
                 }
-            });
+            }
+        });
 
-        return () => subscriber();
+        return () => unsubscribe();
     }, [currentUser]);
 
     const handleImageChange = () => {
@@ -70,6 +70,36 @@ export default function UserProfile() {
     const handleSaveChanges = () => {
         Alert.alert("¡Éxito!", "Tus cambios han sido guardados correctamente.");
         console.log("Guardando cambios...");
+    };
+
+    const handleSignOut = async () => {
+        Alert.alert(
+            "Cerrar sesión",
+            "¿Estás seguro de que deseas cerrar sesión?",
+            [
+                {
+                    text: "Cancelar",
+                    onPress: () => console.log("Cancelado"),
+                    style: "cancel"
+                },
+                {
+                    text: "Cerrar sesión",
+                    onPress: async () => {
+                        try {
+                            await signOut();
+                            navigation.reset({
+                                index: 0,
+                                routes: [{ name: 'Login' }],
+                            });
+                        } catch (error) {
+                            console.error("Error al cerrar sesión:", error);
+                            Alert.alert("Error", "No se pudo cerrar sesión");
+                        }
+                    },
+                    style: "destructive"
+                }
+            ]
+        );
     };
 
     return (
@@ -119,14 +149,24 @@ export default function UserProfile() {
                 onThemeChange={toggleTheme}
             />
 
-            <Button
-                title="Guardar Cambios"
-                onPress={handleSaveChanges}
-                icon="check-circle"
-                variant="primary"
-                size="md"
-                style={styles.saveButtonContainer}
-            />
+            <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 20, marginBottom: 40 }}>
+                <Button
+                    title="Guardar Cambios"
+                    onPress={handleSaveChanges}
+                    icon="check-circle"
+                    variant="primary"
+                    size="md"
+                    style={{ flex: 1 }}
+                />
+                <Button
+                    title="Cerrar sesión"
+                    onPress={handleSignOut}
+                    icon="logout"
+                    variant="secondary"
+                    size="md"
+                    style={{ flex: 1 }}
+                />
+            </View>
         </ScrollView>
     );
 }

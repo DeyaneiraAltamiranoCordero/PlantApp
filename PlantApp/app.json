@@ -35,7 +35,6 @@
           "cameraPermission": "Permite acceder a la cámara para escanear y analizar tus plantas con IA."
         }
       ],
-      "@react-native-google-signin/google-signin",
       [
         "expo-splash-screen",
         {
