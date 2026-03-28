@@ -5,12 +5,12 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/hojas.png",
-    "scheme": "com.flora.app",
+    "scheme": "com.plantapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.flora.app"
+      "bundleIdentifier": "com.plantapp"
     },
     "android": {
       "adaptiveIcon": {
@@ -19,7 +19,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.flora.app",
+      "package": "com.plantapp",
       "googleServicesFile": "./google-services.json"
     },
     "web": {

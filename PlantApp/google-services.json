@@ -1,47 +1,47 @@
 {
-    "project_info": {
-        "project_number": "671777128731",
-        "project_id": "flora-movilapp-35b57",
-        "storage_bucket": "flora-movilapp-35b57.firebasestorage.app"
-    },
-    "client": [
-        {
-            "client_info": {
-                "mobilesdk_app_id": "1:671777128731:android:9af16e8bac9ee65d9093be",
-                "android_client_info": {
-                    "package_name": "com.flora.app"
-                }
-            },
-            "oauth_client": [
-                {
-                    "client_id": "671777128731-ng6r50hcbatkbi5objkpchphs92v6ml6.apps.googleusercontent.com",
-                    "client_type": 1,
-                    "android_info": {
-                        "package_name": "com.flora.app",
-                        "certificate_hash": "23e882c45dbef892efd80592dde5e8608fb09a06"
-                    }
-                },
-                {
-                    "client_id": "671777128731-hkd03bgupqjj5sq0flk2phit94c8ql4s.apps.googleusercontent.com",
-                    "client_type": 3
-                }
-            ],
-            "api_key": [
-                {
-                    "current_key": "AIzaSyCS1r1cU_8Xyph0lZRuNgEPUz8RIWYf1Fk"
-                }
-            ],
-            "services": {
-                "appinvite_service": {
-                    "other_platform_oauth_client": [
-                        {
-                            "client_id": "671777128731-hkd03bgupqjj5sq0flk2phit94c8ql4s.apps.googleusercontent.com",
-                            "client_type": 3
-                        }
-                    ]
-                }
-            }
+  "project_info": {
+    "project_number": "671777128731",
+    "project_id": "flora-movilapp-35b57",
+    "storage_bucket": "flora-movilapp-35b57.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:671777128731:android:b1f0d9da0e184c969093be",
+        "android_client_info": {
+          "package_name": "com.plantapp"
         }
-    ],
-    "configuration_version": "1"
+      },
+      "oauth_client": [
+        {
+          "client_id": "671777128731-klcc9osjo627auks2l8vq3v8oiglbpb2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.plantapp",
+            "certificate_hash": "23e882c45dbef892efd80592dde5e8608fb09a06"
+          }
+        },
+        {
+          "client_id": "671777128731-hkd03bgupqjj5sq0flk2phit94c8ql4s.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCS1r1cU_8Xyph0lZRuNgEPUz8RIWYf1Fk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "671777128731-hkd03bgupqjj5sq0flk2phit94c8ql4s.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
 }
