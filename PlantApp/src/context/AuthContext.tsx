@@ -59,18 +59,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signInWithGoogle = async () => {
-    try {
-      await GoogleSignin.hasPlayServices();
-      const signInResult = await GoogleSignin.signIn();
-      const idToken = signInResult.data?.idToken;
-      if (!idToken) throw new Error('No se obtuvo el token de Google');
-      const googleCredential = auth.GoogleAuthProvider.credential(idToken);
-      await auth().signInWithCredential(googleCredential);
-    } catch (error) {
-      console.error('Error en Google Sign-In:', error);
-      throw error;
-    }
-  };
+  try {
+    await GoogleSignin.hasPlayServices();
+    const signInResult = await GoogleSignin.signIn();
+    console.log('SignIn result:', JSON.stringify(signInResult));
+    const idToken = signInResult.data?.idToken;
+    console.log('idToken:', idToken ? 'obtenido' : 'NULL');
+    if (!idToken) throw new Error('No se obtuvo el token de Google');
+    const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+    const result = await auth().signInWithCredential(googleCredential);
+    console.log('Firebase user:', result.user.uid);
+  } catch (error) {
+    console.error('Error en Google Sign-In:', error);
+    throw error;
+  }
+};
 
   const signOut = async () => {
     try {

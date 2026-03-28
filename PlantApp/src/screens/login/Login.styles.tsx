@@ -24,7 +24,17 @@ export const useLoginTheme = () => {
       width: '100%',
       gap: theme.spacing.lg,
       paddingHorizontal: theme.spacing.md,
-    }
+    },
+    loadingWrapper: {
+      alignItems: 'center',
+      marginBottom: theme.spacing.xl,
+      gap: theme.spacing.sm,
+    },
+    loadingText: {
+      color: theme.colors.mutedForeground,
+      fontSize: theme.typography.size.base,
+      fontFamily: theme.typography.fontFamily.default,
+    },
   });
 
   return { styles, theme, isDark };

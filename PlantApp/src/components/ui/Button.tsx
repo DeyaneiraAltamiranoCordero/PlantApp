@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { TouchableOpacity, Text, ActivityIndicator, ViewStyle, TextStyle, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useProfileTheme } from '../../screens/userProfile/UserProfile.styles';
@@ -7,6 +7,7 @@ interface ButtonProps {
     title: string;
     onPress: () => void;
     icon?: keyof typeof Feather.glyphMap;
+    leftIcon?: ReactNode;
     variant?: 'primary' | 'secondary' | 'outline';
     size?: 'sm' | 'md' | 'lg';
     disabled?: boolean;
@@ -19,6 +20,7 @@ export function Button({
     title,
     onPress,
     icon,
+    leftIcon,
     variant = 'primary',
     size = 'md',
     disabled = false,
@@ -158,6 +160,8 @@ export function Button({
                     size="small"
                     color={getIconColor()}
                 />
+            ) : leftIcon ? (
+                leftIcon
             ) : icon ? (
                 <Feather
                     name={icon}

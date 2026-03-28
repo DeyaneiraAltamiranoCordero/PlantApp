@@ -1,20 +1,13 @@
 import React from 'react';
 import { ActivityIndicator, Alert, Text, View } from 'react-native';
+import { FontAwesome } from '@expo/vector-icons';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../context/AuthContext';
 import { useLoginTheme } from './Login.styles';
 
 export default function LoginScreen() {
   const { signInWithGoogle, loading } = useAuth();
-  const { styles } = useLoginTheme();
-
-  if (loading) {
-    return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={styles.title.color} />
-      </View>
-    );
-  }
+  const { styles, theme } = useLoginTheme();
 
   const handleGoogleSignIn = async () => {
     try {
@@ -26,6 +19,12 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
+      {loading && (
+        <View style={styles.loadingWrapper}>
+          <ActivityIndicator size="large" color={styles.title.color} />
+          <Text style={styles.loadingText}>Preparando tu experiencia...</Text>
+        </View>
+      )}
       <Text style={styles.title}>Bienvenido</Text>
       <View style={styles.buttonContainer}>
         <Button
@@ -33,6 +32,15 @@ export default function LoginScreen() {
           onPress={handleGoogleSignIn}
           variant="primary"
           size="lg"
+          loading={loading}
+          disabled={loading}
+          leftIcon={
+            <FontAwesome
+              name="google"
+              size={20}
+              color={theme.colors.primaryForeground}
+            />
+          }
         />
       </View>
     </View>
