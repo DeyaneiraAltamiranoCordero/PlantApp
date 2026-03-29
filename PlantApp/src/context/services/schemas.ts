@@ -1,5 +1,29 @@
 import { z } from 'zod';
 
+export const ISODateStringSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Usá el formato YYYY-MM-DD.')
+  .refine((value) => {
+    const [yRaw, mRaw, dRaw] = value.split('-');
+    const year = Number(yRaw);
+    const month = Number(mRaw);
+    const day = Number(dRaw);
+
+    if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+      return false;
+    }
+    if (month < 1 || month > 12) return false;
+    if (day < 1 || day > 31) return false;
+
+    // Validate that the date exists (e.g. rejects 2026-02-31).
+    const dt = new Date(`${value}T00:00:00.000Z`);
+    if (Number.isNaN(dt.getTime())) return false;
+    const dtYear = dt.getUTCFullYear();
+    const dtMonth = dt.getUTCMonth() + 1;
+    const dtDay = dt.getUTCDate();
+    return dtYear === year && dtMonth === month && dtDay === day;
+  }, 'Fecha inválida.');
+
 export const CategorySchema = z
   .object({
     id: z.string(),

@@ -1,6 +1,6 @@
 import { auth as firebaseAuth } from '../../config/firebase';
 import { z } from 'zod';
-import { CareTypesArraySchema, CategoriesArraySchema, PestsArraySchema, PlantSchema, PlantsArraySchema } from './schemas';
+import { CareTypesArraySchema, CategoriesArraySchema, ISODateStringSchema, PestsArraySchema, PlantSchema, PlantsArraySchema } from './schemas';
 
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://192.168.100.104:8000';
@@ -461,6 +461,12 @@ export async function getUserByUid(userUid: string): Promise<User> {
 export async function createUserProfile(
   payload: CreateUserProfilePayload,
 ): Promise<User> {
+  if (typeof payload.birthDate === 'string' && payload.birthDate.trim().length > 0) {
+    const parsed = ISODateStringSchema.safeParse(payload.birthDate.trim());
+    if (!parsed.success) {
+      throw new ApiValidationError('Fecha de nacimiento inválida.', parsed.error.issues, payload);
+    }
+  }
   const raw = await apiRequest<User>(`/api/users`, {
     method: 'POST',
     body: payload,
@@ -472,6 +478,12 @@ export async function updateUserProfile(
   userUid: string,
   payload: UpdateUserProfilePayload,
 ): Promise<User> {
+  if (typeof payload.birthDate === 'string' && payload.birthDate.trim().length > 0) {
+    const parsed = ISODateStringSchema.safeParse(payload.birthDate.trim());
+    if (!parsed.success) {
+      throw new ApiValidationError('Fecha de nacimiento inválida.', parsed.error.issues, payload);
+    }
+  }
   const raw = await apiRequest<User>(`/api/users/${userUid}`, {
     method: 'PATCH',
     body: payload,

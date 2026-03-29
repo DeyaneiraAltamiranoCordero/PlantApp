@@ -3,7 +3,7 @@ import { ActivityIndicator, Alert, ScrollView, Text, TextInput, View } from 'rea
 import { Feather } from '@expo/vector-icons';
 import { MyPlantsSection } from '../../components/screenHome/MyPlantsSection';
 import { useAuth } from '../../context/AuthContext';
-import { ApiError, getUserProfile } from '../../context/services/api';
+import { ApiError, getUserPlants, getUserProfile } from '../../context/services/api';
 import { useTheme } from '../../theme/desingSystem';
 import { createHomeStyles } from './Home.styles';
 
@@ -38,10 +38,24 @@ export default function HomeScreen() {
     const loadSummary = async () => {
       setIsLoading(true);
       try {
-        const profile = await getUserProfile(currentUser.uid);
+        const [profile, plants] = await Promise.all([
+          getUserProfile(currentUser.uid),
+          getUserPlants(currentUser.uid),
+        ]);
         if (!isMounted) return;
 
-        setFavoritePlants(uniqueStrings(profile.favoritePlants?.map((p) => p.name) ?? []));
+        const favoriteNamesFromEndpoint = uniqueStrings(
+          profile.favoritePlants?.map((p) => p.name) ?? [],
+        );
+        const favoriteNamesFromPlants = uniqueStrings(
+          (plants ?? []).filter((p) => Boolean(p.isFavorite)).map((p) => p.name),
+        );
+
+        setFavoritePlants(
+          favoriteNamesFromEndpoint.length > 0
+            ? favoriteNamesFromEndpoint
+            : favoriteNamesFromPlants,
+        );
 
         const categoryNamesFromProfile = uniqueStrings(profile.categories?.map((c) => c.name) ?? []);
         const categoryNamesFromPlants = uniqueStrings(profile.plants?.map((p) => p.categoryName) ?? []);

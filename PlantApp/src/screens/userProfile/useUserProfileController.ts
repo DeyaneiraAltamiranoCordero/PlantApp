@@ -3,6 +3,8 @@ import { Alert } from 'react-native';
 import { useForm, useWatch } from 'react-hook-form';
 
 import { ApiError, getUserProfile, updateUserProfile } from '../../context/services/api';
+import { ISODateStringSchema } from '../../context/services/schemas';
+import { useToast } from '../../context/ToastContext';
 import type { PersonalInfoFormValues } from '../../components/screenUserProfile/PersonalInfoForm';
 
 type Params = {
@@ -18,7 +20,7 @@ type Params = {
 };
 
 export function useUserProfileController({ currentUser }: Params) {
-  const { control, handleSubmit, reset } = useForm<PersonalInfoFormValues>({
+  const { control, handleSubmit, reset, setError } = useForm<PersonalInfoFormValues>({
     defaultValues: {
       name: '',
       lastName: '',
@@ -29,6 +31,8 @@ export function useUserProfileController({ currentUser }: Params) {
       description: '',
     },
   });
+
+  const { showToast } = useToast();
 
   const watchedName = useWatch({ control, name: 'name' });
   const watchedNickname = useWatch({ control, name: 'nickname' });
@@ -139,6 +143,21 @@ export function useUserProfileController({ currentUser }: Params) {
       setIsSaving(true);
 
       const trimmedDescription = values.description?.trim();
+      const trimmedBirthday = values.birthday?.trim() ?? '';
+
+      if (trimmedBirthday.length > 0) {
+        const parsed = ISODateStringSchema.safeParse(trimmedBirthday);
+        if (!parsed.success) {
+          const message = parsed.error.issues[0]?.message ?? 'Usá el formato YYYY-MM-DD.';
+          setError('birthday', { type: 'validate', message });
+          showToast({
+            kind: 'error',
+            title: 'Cumpleaños inválido',
+            message,
+          });
+          return;
+        }
+      }
 
       await updateUserProfile(currentUser.uid, {
         name: values.name,
@@ -146,7 +165,7 @@ export function useUserProfileController({ currentUser }: Params) {
         secondLastName: values.secondLastName,
         nickname: values.nickname,
         ...(trimmedDescription ? { description: trimmedDescription } : {}),
-        birthDate: values.birthday,
+        birthDate: trimmedBirthday,
         profilePicture: profileImage,
         publicProfile: !isPrivate,
       });

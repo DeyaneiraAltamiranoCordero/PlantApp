@@ -70,7 +70,7 @@ export default function TabNavigator() {
                             shadowOpacity: 0.3,
                             shadowRadius: 4,
                         }}>
-                            <MaterialCommunityIcons name="line-scan" size={32} color="#FFFFFF" />
+                            <MaterialCommunityIcons name="camera" size={32} color="#FFFFFF" />
                         </View>
                     ),
                 }}

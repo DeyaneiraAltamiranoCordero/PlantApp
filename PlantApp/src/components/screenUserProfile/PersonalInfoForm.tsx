@@ -3,6 +3,7 @@ import { View, Text } from 'react-native';
 import { useProfileTheme } from '../../screens/userProfile/UserProfile.styles';
 import { InputText } from '../ui/InputText';
 import { Control } from 'react-hook-form';
+import { ISODateStringSchema } from '../../context/services/schemas';
 
 export type PersonalInfoFormValues = {
     name: string;
@@ -78,6 +79,15 @@ export function PersonalInfoForm({
                 iconName="calendar"
                 placeholder="YYYY-MM-DD"
                 helperText="Formato recomendado: YYYY-MM-DD"
+                rules={{
+                    validate: (value) => {
+                        const normalized = String(value ?? '').trim();
+                        if (!normalized) return true;
+
+                        const parsed = ISODateStringSchema.safeParse(normalized);
+                        return parsed.success || (parsed.error.issues[0]?.message ?? 'Fecha inválida.');
+                    },
+                }}
             />
 
             <InputText
