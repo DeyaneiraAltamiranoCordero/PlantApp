@@ -29,6 +29,7 @@ export type User = {
   nickname?: string;
   profilePicture?: string | null;
   description?: string;
+  bibliography?: string;
   plantCount?: number;
   streak?: number;
   streakDays?: number;
@@ -52,6 +53,7 @@ export type Plant = {
   categoryId: string;
   categoryName?: string;
   categoryIds?: string[];
+  category?: Category | null;
   age?: string;
   price?: number;
   growthTime?: string;
@@ -64,11 +66,14 @@ export type Plant = {
   lightPreference?: string;
   originLocality?: string;
   temperature?: string;
-  careTypes?: string[];
+  // Backend can return IDs or populated objects.
+  careTypeIds?: string[];
+  careTypes?: Array<string | CareType>;
   lastWatered?: string;
   fertilizerType?: string;
   lastFertilized?: string;
-  pests?: string[];
+  pestIds?: string[];
+  pests?: Array<string | Pest>;
   image?: string | null;
   imageUrl?: string | null;
   photo?: string | null;
@@ -85,6 +90,231 @@ export type Category = {
   name: string;
   description?: string;
 };
+
+export type CareType = {
+  id: string;
+  name: string;
+  description?: string;
+};
+
+export type Pest = {
+  id: string;
+  name: string;
+  scientificName?: string;
+  dangerLevel?: string;
+  description?: string;
+  treatment?: string;
+};
+
+const normalizeUser = (raw: unknown): User => {
+  if (!raw || typeof raw !== 'object') {
+    return {
+      id: '',
+      email: '',
+      name: '',
+    };
+  }
+
+  const record = raw as Record<string, unknown>;
+  const nestedUser =
+    record.user && typeof record.user === 'object'
+      ? (record.user as Record<string, unknown>)
+      : null;
+
+  const id =
+    (typeof record.id === 'string' && record.id) ||
+    (typeof nestedUser?.id === 'string' && nestedUser.id) ||
+    (typeof record.authUid === 'string' && record.authUid) ||
+    (typeof nestedUser?.authUid === 'string' && nestedUser.authUid) ||
+    '';
+
+  const email =
+    (typeof record.email === 'string' && record.email) ||
+    (typeof nestedUser?.email === 'string' && nestedUser.email) ||
+    '';
+
+  const name =
+    (typeof record.name === 'string' && record.name) ||
+    (typeof nestedUser?.name === 'string' && nestedUser.name) ||
+    '';
+
+  const lastName =
+    (typeof record.lastName === 'string' && record.lastName) ||
+    (typeof nestedUser?.lastName === 'string' && nestedUser.lastName) ||
+    (typeof record.last_name === 'string' && record.last_name) ||
+    (typeof nestedUser?.last_name === 'string' && nestedUser.last_name) ||
+    undefined;
+
+  const secondLastName =
+    (typeof record.secondLastName === 'string' && record.secondLastName) ||
+    (typeof nestedUser?.secondLastName === 'string' && nestedUser.secondLastName) ||
+    (typeof record.second_last_name === 'string' && record.second_last_name) ||
+    (typeof nestedUser?.second_last_name === 'string' && nestedUser.second_last_name) ||
+    undefined;
+
+  const nickname =
+    (typeof record.nickname === 'string' && record.nickname) ||
+    (typeof nestedUser?.nickname === 'string' && nestedUser.nickname) ||
+    (typeof record.apodo === 'string' && record.apodo) ||
+    (typeof nestedUser?.apodo === 'string' && nestedUser.apodo) ||
+    undefined;
+
+  const profilePicture =
+    (typeof record.profilePicture === 'string' && record.profilePicture) ||
+    (typeof nestedUser?.profilePicture === 'string' && nestedUser.profilePicture) ||
+    (typeof record.profile_picture === 'string' && record.profile_picture) ||
+    (typeof nestedUser?.profile_picture === 'string' && nestedUser.profile_picture) ||
+    (typeof record.profilePicture === 'object' && record.profilePicture === null
+      ? null
+      : typeof nestedUser?.profilePicture === 'object' && nestedUser.profilePicture === null
+        ? null
+        : undefined);
+
+  const bibliography =
+    (typeof record.bibliography === 'string' && record.bibliography) ||
+    (typeof nestedUser?.bibliography === 'string' && nestedUser.bibliography) ||
+    (typeof record.bibliografia === 'string' && record.bibliografia) ||
+    (typeof nestedUser?.bibliografia === 'string' && nestedUser.bibliografia) ||
+    undefined;
+
+  const descriptionRaw =
+    (typeof record.description === 'string' && record.description) ||
+    (typeof nestedUser?.description === 'string' && nestedUser.description) ||
+    (typeof record.descripcion === 'string' && record.descripcion) ||
+    (typeof nestedUser?.descripcion === 'string' && nestedUser.descripcion) ||
+    (typeof record.bio === 'string' && record.bio) ||
+    (typeof nestedUser?.bio === 'string' && nestedUser.bio) ||
+    undefined;
+
+  const description = descriptionRaw ?? bibliography;
+
+  const birthDate =
+    (typeof record.birthDate === 'string' && record.birthDate) ||
+    (typeof nestedUser?.birthDate === 'string' && nestedUser.birthDate) ||
+    (typeof record.birth_date === 'string' && record.birth_date) ||
+    (typeof nestedUser?.birth_date === 'string' && nestedUser.birth_date) ||
+    undefined;
+
+  const publicProfile =
+    typeof record.publicProfile === 'boolean'
+      ? record.publicProfile
+      : typeof nestedUser?.publicProfile === 'boolean'
+        ? nestedUser.publicProfile
+      : typeof record.public_profile === 'boolean'
+        ? record.public_profile
+        : typeof nestedUser?.public_profile === 'boolean'
+          ? nestedUser.public_profile
+        : undefined;
+
+  const isPrivate =
+    typeof record.isPrivate === 'boolean'
+      ? record.isPrivate
+      : typeof nestedUser?.isPrivate === 'boolean'
+        ? nestedUser.isPrivate
+      : typeof record.is_private === 'boolean'
+        ? record.is_private
+        : typeof nestedUser?.is_private === 'boolean'
+          ? nestedUser.is_private
+        : undefined;
+
+  const code =
+    (typeof record.code === 'string' && record.code) ||
+    (typeof nestedUser?.code === 'string' && nestedUser.code) ||
+    undefined;
+
+  const plantCount =
+    typeof record.plantCount === 'number'
+      ? record.plantCount
+      : typeof nestedUser?.plantCount === 'number'
+        ? nestedUser.plantCount
+      : typeof record.plant_count === 'number'
+        ? record.plant_count
+        : typeof nestedUser?.plant_count === 'number'
+          ? nestedUser.plant_count
+        : undefined;
+
+  const streak =
+    typeof record.streak === 'number'
+      ? record.streak
+      : typeof nestedUser?.streak === 'number'
+        ? nestedUser.streak
+        : undefined;
+
+  const streakDays =
+    typeof record.streakDays === 'number'
+      ? record.streakDays
+      : typeof nestedUser?.streakDays === 'number'
+        ? nestedUser.streakDays
+      : typeof record.streak_days === 'number'
+        ? record.streak_days
+        : typeof nestedUser?.streak_days === 'number'
+          ? nestedUser.streak_days
+        : undefined;
+
+  return {
+    id,
+    email,
+    code,
+    name,
+    lastName,
+    secondLastName,
+    nickname,
+    profilePicture,
+    description,
+    bibliography,
+    plantCount,
+    streak,
+    streakDays,
+    birthDate,
+    publicProfile,
+    isPrivate,
+  };
+};
+
+const normalizePest = (raw: unknown): Pest | null => {
+  if (!raw || typeof raw !== 'object') return null;
+  const record = raw as Record<string, unknown>;
+  const id = typeof record.id === 'string' ? record.id : '';
+  if (!id) return null;
+
+  const name =
+    (typeof record.name === 'string' && record.name) ||
+    (typeof record.nombre === 'string' && record.nombre) ||
+    id;
+
+  const scientificName =
+    (typeof record.scientificName === 'string' && record.scientificName) ||
+    (typeof record.scientific_name === 'string' && record.scientific_name) ||
+    undefined;
+
+  const dangerLevel =
+    (typeof record.dangerLevel === 'string' && record.dangerLevel) ||
+    (typeof record.danger_level === 'string' && record.danger_level) ||
+    undefined;
+
+  const description =
+    (typeof record.description === 'string' && record.description) ||
+    (typeof record.descripcion === 'string' && record.descripcion) ||
+    undefined;
+
+  const treatment =
+    (typeof record.treatment === 'string' && record.treatment) ||
+    (typeof record.tratamiento === 'string' && record.tratamiento) ||
+    undefined;
+
+  return {
+    id,
+    name,
+    scientificName,
+    dangerLevel,
+    description,
+    treatment,
+  };
+};
+
+let careTypesCache: CareType[] | null = null;
+let pestsCache: Pest[] | null = null;
+let categoriesCache: Category[] | null = null;
 
 export type Friend = {
   id: string;
@@ -180,30 +410,37 @@ async function apiRequest<T>(path: string, options: ApiOptions = {}): Promise<T>
 export async function getUserProfile(
   userUid: string,
 ): Promise<UserProfileResponse> {
-  return apiRequest<UserProfileResponse>(`/api/users/${userUid}/profile`);
+  const raw = await apiRequest<UserProfileResponse>(`/api/users/${userUid}/profile`);
+  return {
+    ...raw,
+    user: normalizeUser(raw.user),
+  };
 }
 
 export async function getUserByUid(userUid: string): Promise<User> {
-  return apiRequest<User>(`/api/users/${userUid}`);
+  const raw = await apiRequest<User>(`/api/users/${userUid}`);
+  return normalizeUser(raw);
 }
 
 export async function createUserProfile(
   payload: CreateUserProfilePayload,
 ): Promise<User> {
-  return apiRequest<User>(`/api/users`, {
+  const raw = await apiRequest<User>(`/api/users`, {
     method: 'POST',
     body: payload,
   });
+  return normalizeUser(raw);
 }
 
 export async function updateUserProfile(
   userUid: string,
   payload: UpdateUserProfilePayload,
 ): Promise<User> {
-  return apiRequest<User>(`/api/users/${userUid}`, {
+  const raw = await apiRequest<User>(`/api/users/${userUid}`, {
     method: 'PATCH',
     body: payload,
   });
+  return normalizeUser(raw);
 }
 
 export async function getPlants(): Promise<Plant[]> {
@@ -231,6 +468,96 @@ export async function updatePlant(
   });
 }
 
-export async function getCategories(): Promise<Category[]> {
-  return apiRequest<Category[]>(`/api/categories`);
+export async function getCategories(options?: { forceRefresh?: boolean }): Promise<Category[]> {
+  if (!options?.forceRefresh && Array.isArray(categoriesCache)) {
+    return categoriesCache;
+  }
+
+  const result = await apiRequest<Category[]>(`/api/categories`);
+  categoriesCache = Array.isArray(result) ? result : [];
+  return categoriesCache;
+}
+
+export async function getCareTypes(options?: { forceRefresh?: boolean }): Promise<CareType[]> {
+  if (!options?.forceRefresh && Array.isArray(careTypesCache)) {
+    return careTypesCache;
+  }
+
+  try {
+    const result = await apiRequest<CareType[]>(`/api/care-types`);
+    careTypesCache = Array.isArray(result) ? result : [];
+    return careTypesCache;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      try {
+        const result = await apiRequest<CareType[]>(`/api/careTypes`);
+        careTypesCache = Array.isArray(result) ? result : [];
+        return careTypesCache;
+      } catch (fallbackError) {
+        if (fallbackError instanceof ApiError && fallbackError.status === 404) {
+          const result = await apiRequest<CareType[]>(`/api/caretypes`);
+          careTypesCache = Array.isArray(result) ? result : [];
+          return careTypesCache;
+        }
+        throw fallbackError;
+      }
+    }
+    throw error;
+  }
+}
+
+export async function getPests(options?: { forceRefresh?: boolean }): Promise<Pest[]> {
+  if (!options?.forceRefresh && Array.isArray(pestsCache)) {
+    return pestsCache;
+  }
+
+  try {
+    const result = await apiRequest<Pest[]>(`/api/pests`);
+    pestsCache = Array.isArray(result)
+      ? result.map((item) => normalizePest(item)).filter((item): item is Pest => Boolean(item))
+      : [];
+    return pestsCache;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      // Fallback for older routes if any
+      const result = await apiRequest<Pest[]>(`/api/pest`);
+      pestsCache = Array.isArray(result)
+        ? result.map((item) => normalizePest(item)).filter((item): item is Pest => Boolean(item))
+        : [];
+      return pestsCache;
+    }
+    throw error;
+  }
+}
+
+export async function prefetchPlantCatalogs(): Promise<void> {
+  await Promise.all([
+    getCategories().catch(() => null),
+    getCareTypes().catch(() => null),
+    getPests().catch(() => null),
+  ]);
+}
+
+export async function getCategoryById(categoryId: string): Promise<Category | null> {
+  const categories = await getCategories();
+  return categories.find((cat) => cat.id === categoryId) ?? null;
+}
+
+export async function getCareTypeById(careTypeId: string): Promise<CareType | null> {
+  const careTypes = await getCareTypes();
+  return careTypes.find((item) => item.id === careTypeId) ?? null;
+}
+
+export async function getPestById(pestId: string): Promise<Pest | null> {
+  const pests = await getPests();
+  return pests.find((item) => item.id === pestId) ?? null;
+}
+
+export async function getPestDocument(pestId: string): Promise<Pest> {
+  const raw = await apiRequest<unknown>(`/api/pests/${pestId}`);
+  const normalized = normalizePest(raw);
+  if (!normalized) {
+    throw new Error(`Invalid pest payload for id '${pestId}'`);
+  }
+  return normalized;
 }

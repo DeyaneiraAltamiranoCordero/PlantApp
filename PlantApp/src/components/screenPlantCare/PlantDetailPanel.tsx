@@ -1,10 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { Category, getCategories, Plant, updatePlant } from '../../context/services/api';
+import { CareType, Category, getCareTypes, getCategories, getPestDocument, getPests, Pest, Plant, updatePlant } from '../../context/services/api';
 import { PlantDetailForm, PlantDetailFormValues } from './PlantDetailForm';
 import { usePlantCareStyles } from '../../screens/plantCare/PlantCare.style';
 import { Button } from '../ui/Button';
+import { AddItemCard } from '../ui/AddItemCard';
+import { InfoCard } from '../ui/InfoCard';
+import { ModalHeader } from '../ui/ModalHeader';
+
+type CareTypeInfo = {
+  id: string;
+  name: string;
+  description: string;
+};
 
 type PestInfo = {
   id: string;
@@ -13,6 +22,13 @@ type PestInfo = {
   dangerLevel: string;
   description: string;
   treatment: string;
+};
+
+const normalizeIdArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => (typeof item === 'string' ? item : (item as { id?: string } | null)?.id))
+    .filter((item): item is string => Boolean(item));
 };
 
 const PEST_CATALOG: Record<string, Omit<PestInfo, 'id'>> = {
@@ -38,11 +54,31 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
   const [isSaving, setIsSaving] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isPestsVisible, setIsPestsVisible] = useState(false);
+  const [isAddPestVisible, setIsAddPestVisible] = useState(false);
+  const [pestsCatalog, setPestsCatalog] = useState<Pest[]>([]);
+  const [isPestsLoading, setIsPestsLoading] = useState(false);  
+  const [pestsError, setPestsError] = useState<string | null>(null);
+  const requestedPestIdsRef = useRef<Set<string>>(new Set());
+  const notFoundPestIdsRef = useRef<Set<string>>(new Set());
+  const [isCareTypesVisible, setIsCareTypesVisible] = useState(false);
+  const [isAddCareTypeVisible, setIsAddCareTypeVisible] = useState(false);
+  const [careTypesCatalog, setCareTypesCatalog] = useState<CareType[]>([]);
+  const [isCareTypesLoading, setIsCareTypesLoading] = useState(false);
+  const [careTypesError, setCareTypesError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!visible) {
       setIsSaving(false);
       setIsPestsVisible(false);
+      setIsAddPestVisible(false);
+      setPestsCatalog([]);
+      setIsPestsLoading(false);
+      setPestsError(null);
+      setIsCareTypesVisible(false);
+      setIsAddCareTypeVisible(false);
+      setCareTypesCatalog([]);
+      setIsCareTypesLoading(false);
+      setCareTypesError(null);
     }
   }, [visible]);
 
@@ -75,23 +111,196 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
     return null;
   }
 
-  const pests = Array.isArray(plant.pests) ? plant.pests : [];
-  const pestsCount = pests.length;
+  const pestIds =
+    Array.isArray(plant.pestIds) && plant.pestIds.length > 0
+      ? plant.pestIds
+      : normalizeIdArray(plant.pests);
+  const pestsCount = pestIds.length;
 
-  const getPestInfo = (pestId: string): PestInfo => {
-    const info = PEST_CATALOG[pestId];
-    if (!info) {
+  const careTypeIds =
+    Array.isArray(plant.careTypeIds) && plant.careTypeIds.length > 0
+      ? plant.careTypeIds
+      : normalizeIdArray(plant.careTypes);
+  const careTypesCount = careTypeIds.length;
+
+  const plantPestsMap = new Map(
+    (Array.isArray(plant.pests) ? plant.pests : [])
+      .map((item) => (typeof item === 'string' ? null : item))
+      .filter(Boolean)
+      .map((item) => [(item as Pest).id, item as Pest] as const),
+  );
+
+  const plantCareTypesMap = new Map(
+    (Array.isArray(plant.careTypes) ? plant.careTypes : [])
+      .map((item) => (typeof item === 'string' ? null : item))
+      .filter(Boolean)
+      .map((item) => [(item as CareType).id, item as CareType] as const),
+  );
+
+  const pestsCatalogMap = new Map(pestsCatalog.map((item) => [item.id, item] as const));
+
+  const availablePests = (pestsCatalog.length > 0
+    ? pestsCatalog
+    : Object.entries(PEST_CATALOG).map(([id, info]) => ({ id, ...info })))
+    .filter((item) => !pestIds.includes(item.id));
+
+  const availableCareTypes = careTypesCatalog.filter((item) => !careTypeIds.includes(item.id));
+
+  const getCareTypeInfo = (careTypeId: string): CareTypeInfo => {
+    const fromPlant = plantCareTypesMap.get(careTypeId);
+    if (fromPlant) {
       return {
-        id: pestId,
-        name: pestId,
-        scientificName: '—',
-        dangerLevel: '—',
-        description: 'Información no disponible por el momento.',
-        treatment: '—',
+        id: fromPlant.id,
+        name: fromPlant.name ?? fromPlant.id,
+        description: fromPlant.description ?? '—',
       };
     }
-    return { id: pestId, ...info };
+
+    const info = careTypesCatalog.find((item) => item.id === careTypeId);
+    if (!info) {
+      return {
+        id: careTypeId,
+        name: careTypeId,
+        description: 'Información no disponible por el momento.',
+      };
+    }
+    return {
+      id: careTypeId,
+      name: info.name,
+      description: info.description ?? '—',
+    };
   };
+
+  const ensureCareTypesLoaded = async () => {
+    if (isCareTypesLoading) return;
+    if (careTypesCatalog.length > 0) return;
+
+    try {
+      setIsCareTypesLoading(true);
+      setCareTypesError(null);
+      const result = await getCareTypes();
+      setCareTypesCatalog(Array.isArray(result) ? result : []);
+    } catch (error) {
+      console.error('Error cargando tipos de cuidado', error);
+      setCareTypesCatalog([]);
+      setCareTypesError('No pudimos cargar los tipos de cuidado desde la API.');
+    } finally {
+      setIsCareTypesLoading(false);
+    }
+  };
+
+  const ensurePestsLoaded = async () => {
+    if (isPestsLoading) return;
+    if (pestsCatalog.length > 0) return;
+
+    try {
+      setIsPestsLoading(true);
+      setPestsError(null);
+      const result = await getPests();
+      setPestsCatalog(Array.isArray(result) ? result : []);
+    } catch (error) {
+      console.error('Error cargando plagas', error);
+      setPestsCatalog([]);
+      setPestsError('No pudimos cargar las plagas desde la API.');
+    } finally {
+      setIsPestsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isPestsVisible) return;
+
+    // Always try to keep the catalog warm.
+    void ensurePestsLoaded();
+
+    const plantPestObjectIds = new Set(
+      (Array.isArray(plant.pests) ? plant.pests : [])
+        .map((item) => (typeof item === 'string' ? null : item))
+        .filter(Boolean)
+        .map((item) => (item as Pest).id),
+    );
+    const catalogIds = new Set(pestsCatalog.map((item) => item.id));
+
+    const missingIds = pestIds.filter((id) => {
+      if (!id) return false;
+      if (plantPestObjectIds.has(id)) return false;
+      if (catalogIds.has(id)) return false;
+      if (PEST_CATALOG[id]) return false;
+      if (requestedPestIdsRef.current.has(id)) return false;
+      if (notFoundPestIdsRef.current.has(id)) return false;
+      return true;
+    });
+
+    if (missingIds.length === 0) return;
+
+    missingIds.forEach((id) => requestedPestIdsRef.current.add(id));
+
+    void (async () => {
+      const results = await Promise.all(
+        missingIds.map(async (id) => {
+          try {
+            return await getPestDocument(id);
+          } catch (error) {
+            console.warn('No se pudo resolver la plaga por ID', { pestId: id, error });
+            notFoundPestIdsRef.current.add(id);
+            return null;
+          }
+        }),
+      );
+
+      const resolved = results.filter((item): item is Pest => Boolean(item));
+      if (resolved.length === 0) return;
+
+      setPestsCatalog((prev) => {
+        const known = new Map(prev.map((item) => [item.id, item] as const));
+        resolved.forEach((item) => known.set(item.id, item));
+        return Array.from(known.values());
+      });
+    })();
+  }, [isPestsVisible, pestIds, pestsCatalog, plant.pests]);
+
+  const getPestInfo = (pestId: string): PestInfo => {
+    const fromPlant = plantPestsMap.get(pestId);
+    if (fromPlant) {
+      return {
+        id: fromPlant.id,
+        name: fromPlant.name ?? fromPlant.id,
+        scientificName: fromPlant.scientificName ?? '—',
+        dangerLevel: fromPlant.dangerLevel ?? '—',
+        description: fromPlant.description ?? '—',
+        treatment: fromPlant.treatment ?? '—',
+      };
+    }
+
+    const fromApi = pestsCatalogMap.get(pestId);
+    if (fromApi) {
+      return {
+        id: fromApi.id,
+        name: fromApi.name ?? fromApi.id,
+        scientificName: fromApi.scientificName ?? '—',
+        dangerLevel: fromApi.dangerLevel ?? '—',
+        description: fromApi.description ?? '—',
+        treatment: fromApi.treatment ?? '—',
+      };
+    }
+
+    const info = PEST_CATALOG[pestId];
+    if (info) return { id: pestId, ...info };
+
+    return {
+      id: pestId,
+      name: pestId,
+      scientificName: '—',
+      dangerLevel: '—',
+      description: 'Información no disponible por el momento.',
+      treatment: '—',
+    };
+  };
+
+  const isPestResolved = (pestId: string) =>
+    plantPestsMap.has(pestId) || pestsCatalogMap.has(pestId) || Boolean(PEST_CATALOG[pestId]);
+
+  const unresolvedPestIds = pestIds.filter((id) => !isPestResolved(id));
 
   const handleRemovePest = async (pestId: string) => {
     Alert.alert(
@@ -105,7 +314,7 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
           style: 'destructive',
           onPress: async () => {
             try {
-              const nextPests = pests.filter((id) => id !== pestId);
+              const nextPests = pestIds.filter((id) => id !== pestId);
               const nextStatus = nextPests.length > 0 ? 'Enferma' : 'Saludable';
 
               const updated = await updatePlant(plant.id, {
@@ -121,6 +330,40 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
         },
       ],
     );
+  };
+
+  const handleAddPest = async (pestId: string) => {
+    try {
+      const nextPests = Array.from(new Set([...pestIds, pestId]));
+      const nextStatus = nextPests.length > 0 ? 'Enferma' : 'Saludable';
+
+      const updated = await updatePlant(plant.id, {
+        pests: nextPests,
+        status: nextStatus,
+      });
+      onPlantUpdated(updated);
+      setIsAddPestVisible(false);
+      Alert.alert('Listo', 'Agregamos la plaga a tu planta.');
+    } catch (error) {
+      console.error('Error agregando plaga', error);
+      Alert.alert('Error', 'No pudimos agregar la plaga.');
+    }
+  };
+
+  const handleAddCareType = async (careTypeId: string) => {
+    try {
+      const nextCareTypes = Array.from(new Set([...careTypeIds, careTypeId]));
+
+      const updated = await updatePlant(plant.id, {
+        careTypes: nextCareTypes,
+      });
+      onPlantUpdated(updated);
+      setIsAddCareTypeVisible(false);
+      Alert.alert('Listo', 'Agregamos el tipo de cuidado a tu planta.');
+    } catch (error) {
+      console.error('Error agregando tipo de cuidado', error);
+      Alert.alert('Error', 'No pudimos agregar el tipo de cuidado.');
+    }
   };
 
   const handleSave = async (values: PlantDetailFormValues) => {
@@ -189,14 +432,22 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
             {plant.name}
           </Text>
           <Text style={{ color: theme.colors.mutedForeground, marginBottom: theme.spacing.xl }}>
-            {plant.categoryName || 'Sin categoría'}
+            {plant.categoryName || plant.category?.name || 'Sin categoría'}
           </Text>
 
           <PlantDetailForm
             plant={plant}
             categories={categories}
             pestsCount={pestsCount}
-            onOpenPests={() => setIsPestsVisible(true)}
+            onOpenPests={() => {
+              setIsPestsVisible(true);
+              void ensurePestsLoaded();
+            }}
+            careTypesCount={careTypesCount}
+            onOpenCareTypes={async () => {
+              setIsCareTypesVisible(true);
+              await ensureCareTypesLoaded();
+            }}
             onSave={handleSave}
             loading={isSaving}
           />
@@ -215,70 +466,58 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
         onRequestClose={() => setIsPestsVisible(false)}
       >
         <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-          <View
-            style={{
-              paddingHorizontal: theme.spacing.xl,
-              paddingTop: theme.spacing.lg,
-              paddingBottom: theme.spacing.lg,
-              borderBottomWidth: 1,
-              borderBottomColor: theme.colors.border,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: theme.spacing.md,
+          <ModalHeader
+            title="Plagas"
+            subtitle={
+              pestsCount > 0
+                ? `${pestsCount} ${pestsCount === 1 ? 'registro' : 'registros'}`
+                : 'Sin plagas registradas'
+            }
+            onRightAction={() => {
+              setIsAddPestVisible(true);
+              void ensurePestsLoaded();
             }}
-          >
-            <View style={{ flex: 1 }}>
-              <Text
-                style={{
-                  fontSize: theme.typography.size.xl,
-                  fontWeight: theme.typography.weight.bold,
-                  color: theme.colors.foreground,
-                  fontFamily: theme.typography.fontFamily.bold,
-                }}
-              >
-                Plagas
-              </Text>
-              <Text style={{ color: theme.colors.mutedForeground, marginTop: theme.spacing.xs }}>
-                {pestsCount > 0
-                  ? `${pestsCount} ${pestsCount === 1 ? 'registro' : 'registros'}`
-                  : 'Sin plagas registradas'}
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              disabled
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: theme.radius.md,
-                borderWidth: 1,
-                borderColor: theme.colors.border,
-                alignItems: 'center',
-                justifyContent: 'center',
-                opacity: 0.5,
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Agregar plaga"
-            >
-              <Feather name="plus" size={18} color={theme.colors.mutedForeground} />
-            </TouchableOpacity>
-          </View>
+            rightActionA11yLabel="Agregar plaga"
+          />
 
           <ScrollView
             style={{ flex: 1 }}
             contentContainerStyle={{ paddingHorizontal: theme.spacing.xl, paddingVertical: theme.spacing.lg }}
           >
+            {unresolvedPestIds.length > 0 ? (
+              <InfoCard style={{ marginBottom: theme.spacing.lg }}>
+                <Text
+                  style={{
+                    fontSize: theme.typography.size.base,
+                    color: theme.colors.foreground,
+                    fontFamily: theme.typography.fontFamily.semibold,
+                  }}
+                >
+                  Hay plagas sin información
+                </Text>
+                <Text style={{ color: theme.colors.mutedForeground, marginTop: theme.spacing.xs }}>
+                  IDs: {unresolvedPestIds.join(', ')}
+                </Text>
+                <Text style={{ color: theme.colors.mutedForeground, marginTop: theme.spacing.xs }}>
+                  Revisá que existan como documentos en la colección "pests" (mismo id) o que el endpoint /api/pests/{'{id}'} esté accesible.
+                </Text>
+              </InfoCard>
+            ) : null}
+
+            {isPestsLoading ? (
+              <InfoCard style={{ marginBottom: theme.spacing.lg }}>
+                <Text style={{ color: theme.colors.foreground }}>Cargando plagas...</Text>
+              </InfoCard>
+            ) : null}
+
+            {pestsError ? (
+              <InfoCard style={{ marginBottom: theme.spacing.lg }}>
+                <Text style={{ color: theme.colors.foreground }}>{pestsError}</Text>
+              </InfoCard>
+            ) : null}
+
             {pestsCount === 0 ? (
-              <View
-                style={{
-                  backgroundColor: theme.colors.card,
-                  borderRadius: theme.radius.xl,
-                  borderWidth: 1,
-                  borderColor: theme.colors.border,
-                  padding: theme.spacing.xl,
-                }}
-              >
+              <InfoCard>
                 <Text
                   style={{
                     fontSize: theme.typography.size.base,
@@ -288,22 +527,12 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
                 >
                   No hay plagas registradas en esta planta.
                 </Text>
-              </View>
+              </InfoCard>
             ) : (
-              pests.map((pestId) => {
+              pestIds.map((pestId: string) => {
                 const info = getPestInfo(pestId);
                 return (
-                  <View
-                    key={pestId}
-                    style={{
-                      backgroundColor: theme.colors.card,
-                      borderRadius: theme.radius.xl,
-                      borderWidth: 1,
-                      borderColor: theme.colors.border,
-                      padding: theme.spacing.xl,
-                      marginBottom: theme.spacing.lg,
-                    }}
-                  >
+                  <InfoCard key={pestId} style={{ marginBottom: theme.spacing.lg }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing.md }}>
                       <Text
                         style={{
@@ -381,7 +610,7 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
                     <Text style={{ color: theme.colors.mutedForeground, marginTop: theme.spacing.xs }}>
                       {info.treatment}
                     </Text>
-                  </View>
+                  </InfoCard>
                 );
               })
             )}
@@ -390,6 +619,223 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
               title="Volver"
               variant="secondary"
               onPress={() => setIsPestsVisible(false)}
+              style={{ marginTop: theme.spacing.md }}
+            />
+          </ScrollView>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={isAddPestVisible}
+        animationType="slide"
+        onRequestClose={() => setIsAddPestVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+          <ModalHeader
+            title="Agregar plaga"
+            subtitle="Elegí una plaga para agregarla a esta planta."
+          />
+
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingHorizontal: theme.spacing.xl, paddingVertical: theme.spacing.lg }}
+          >
+            {isPestsLoading ? (
+              <InfoCard style={{ marginBottom: theme.spacing.lg }}>
+                <Text style={{ color: theme.colors.foreground }}>Cargando plagas...</Text>
+              </InfoCard>
+            ) : null}
+
+            {pestsError ? (
+              <InfoCard style={{ marginBottom: theme.spacing.lg }}>
+                <Text style={{ color: theme.colors.foreground }}>{pestsError}</Text>
+              </InfoCard>
+            ) : null}
+
+            {!isPestsLoading && availablePests.length === 0 ? (
+              <InfoCard>
+                <Text style={{ color: theme.colors.foreground }}>No hay más plagas disponibles para agregar.</Text>
+              </InfoCard>
+            ) : null}
+
+            {availablePests.map((item) => {
+              const info = getPestInfo(item.id);
+              return (
+                <AddItemCard
+                  key={item.id}
+                  title={info.name}
+                  subtitle={info.scientificName}
+                  onPress={() => handleAddPest(item.id)}
+                  accessibilityLabel={`Agregar plaga ${info.name}`}
+                />
+              );
+            })}
+
+            <Button
+              title="Cancelar"
+              variant="secondary"
+              onPress={() => setIsAddPestVisible(false)}
+              style={{ marginTop: theme.spacing.md }}
+            />
+          </ScrollView>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={isCareTypesVisible}
+        animationType="slide"
+        onRequestClose={() => setIsCareTypesVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+          <ModalHeader
+            title="Tipos de cuidado"
+            subtitle={
+              careTypesCount > 0
+                ? `${careTypesCount} ${careTypesCount === 1 ? 'registro' : 'registros'}`
+                : 'Sin tipos de cuidado'
+            }
+            onRightAction={() => {
+              setIsAddCareTypeVisible(true);
+              void ensureCareTypesLoaded();
+            }}
+            rightActionA11yLabel="Agregar tipo de cuidado"
+          />
+
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingHorizontal: theme.spacing.xl, paddingVertical: theme.spacing.lg }}
+          >
+            {isCareTypesLoading ? (
+              <InfoCard style={{ marginBottom: theme.spacing.lg }}>
+                <Text
+                  style={{
+                    fontSize: theme.typography.size.base,
+                    color: theme.colors.foreground,
+                    fontFamily: theme.typography.fontFamily.default,
+                  }}
+                >
+                  Cargando tipos de cuidado...
+                </Text>
+              </InfoCard>
+            ) : null}
+
+            {careTypesError ? (
+              <InfoCard style={{ marginBottom: theme.spacing.lg }}>
+                <Text
+                  style={{
+                    fontSize: theme.typography.size.base,
+                    color: theme.colors.foreground,
+                    fontFamily: theme.typography.fontFamily.default,
+                  }}
+                >
+                  {careTypesError}
+                </Text>
+              </InfoCard>
+            ) : null}
+
+            {careTypesCount === 0 ? (
+              <InfoCard>
+                <Text
+                  style={{
+                    fontSize: theme.typography.size.base,
+                    color: theme.colors.foreground,
+                    fontFamily: theme.typography.fontFamily.default,
+                  }}
+                >
+                  No hay tipos de cuidado registrados en esta planta.
+                </Text>
+              </InfoCard>
+            ) : (
+              careTypeIds.map((careTypeId) => {
+                const info = getCareTypeInfo(careTypeId);
+                return (
+                  <InfoCard key={careTypeId} style={{ marginBottom: theme.spacing.lg }}>
+                    <Text
+                      style={{
+                        fontSize: theme.typography.size.lg,
+                        color: theme.colors.foreground,
+                        fontFamily: theme.typography.fontFamily.bold,
+                      }}
+                    >
+                      {info.name}
+                    </Text>
+
+                    <Text
+                      style={{
+                        marginTop: theme.spacing.lg,
+                        color: theme.colors.foreground,
+                        fontFamily: theme.typography.fontFamily.semibold,
+                      }}
+                    >
+                      Descripción
+                    </Text>
+                    <Text style={{ color: theme.colors.mutedForeground, marginTop: theme.spacing.xs }}>
+                      {info.description}
+                    </Text>
+                  </InfoCard>
+                );
+              })
+            )}
+
+            <Button
+              title="Volver"
+              variant="secondary"
+              onPress={() => setIsCareTypesVisible(false)}
+              style={{ marginTop: theme.spacing.md }}
+            />
+          </ScrollView>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={isAddCareTypeVisible}
+        animationType="slide"
+        onRequestClose={() => setIsAddCareTypeVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+          <ModalHeader
+            title="Agregar tipo de cuidado"
+            subtitle="Elegí un tipo de cuidado para agregarlo a esta planta."
+          />
+
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingHorizontal: theme.spacing.xl, paddingVertical: theme.spacing.lg }}
+          >
+            {isCareTypesLoading ? (
+              <InfoCard style={{ marginBottom: theme.spacing.lg }}>
+                <Text style={{ color: theme.colors.foreground }}>Cargando tipos de cuidado...</Text>
+              </InfoCard>
+            ) : null}
+
+            {careTypesError ? (
+              <InfoCard style={{ marginBottom: theme.spacing.lg }}>
+                <Text style={{ color: theme.colors.foreground }}>{careTypesError}</Text>
+              </InfoCard>
+            ) : null}
+
+            {!isCareTypesLoading && !careTypesError && availableCareTypes.length === 0 ? (
+              <InfoCard>
+                <Text style={{ color: theme.colors.foreground }}>
+                  No hay más tipos de cuidado disponibles para agregar.
+                </Text>
+              </InfoCard>
+            ) : null}
+
+            {availableCareTypes.map((item) => (
+              <AddItemCard
+                key={item.id}
+                title={item.name}
+                subtitle={item.description ?? '—'}
+                onPress={() => handleAddCareType(item.id)}
+                accessibilityLabel={`Agregar tipo de cuidado ${item.name}`}
+              />
+            ))}
+
+            <Button
+              title="Cancelar"
+              variant="secondary"
+              onPress={() => setIsAddCareTypeVisible(false)}
               style={{ marginTop: theme.spacing.md }}
             />
           </ScrollView>

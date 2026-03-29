@@ -1,10 +1,67 @@
 import React, { useMemo, useState } from 'react';
-import { Modal, ScrollView, TouchableOpacity, View, Text, TextInput, StyleSheet, Switch } from 'react-native';
+import { Modal, ScrollView, TouchableOpacity, View, Text, TextInput, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Category, Plant } from '../../context/services/api';
 import { Button } from '../ui/Button';
+import { BooleanSwitchRow } from '../ui/BooleanSwitchRow';
+import { CatalogSummaryCard } from '../ui/CatalogSummaryCard';
+import { SelectBox } from '../ui/SelectBox';
 import { usePlantCareStyles } from '../../screens/plantCare/PlantCare.style';
 import { AppTheme } from '../../theme/desingSystem';
+
+const pad2 = (value: number) => String(value).padStart(2, '0');
+
+const formatIsoToDisplayDate = (rawIso: string): string => {
+  const iso = rawIso.trim();
+  if (!iso) return '';
+
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return rawIso;
+  }
+
+  const day = pad2(date.getUTCDate());
+  const month = pad2(date.getUTCMonth() + 1);
+  const year = date.getUTCFullYear();
+  return `${day}/${month}/${year}`;
+};
+
+const parseDisplayDateToIso = (rawDisplay: string): string | null => {
+  const display = rawDisplay.trim();
+  if (!display) return '';
+
+  // DD/MM/YYYY or DD-MM-YYYY
+  const dmY = display.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (dmY) {
+    const day = Number(dmY[1]);
+    const month = Number(dmY[2]);
+    const year = Number(dmY[3]);
+    if (!Number.isFinite(day) || !Number.isFinite(month) || !Number.isFinite(year)) return null;
+    if (year < 1000 || month < 1 || month > 12 || day < 1 || day > 31) return null;
+    // Use midday UTC to avoid timezone date shifting on display.
+    const iso = new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0)).toISOString();
+    return iso;
+  }
+
+  // YYYY-MM-DD
+  const yMd = display.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (yMd) {
+    const year = Number(yMd[1]);
+    const month = Number(yMd[2]);
+    const day = Number(yMd[3]);
+    if (!Number.isFinite(day) || !Number.isFinite(month) || !Number.isFinite(year)) return null;
+    if (year < 1000 || month < 1 || month > 12 || day < 1 || day > 31) return null;
+    return new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0)).toISOString();
+  }
+
+  // If the user pastes an ISO string, accept it.
+  const parsed = new Date(display);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString();
+  }
+
+  return null;
+};
 
 export type PlantDetailFormValues = {
   name: string;
@@ -33,6 +90,8 @@ interface PlantDetailFormProps {
   categories: Category[];
   pestsCount: number;
   onOpenPests: () => void;
+  careTypesCount: number;
+  onOpenCareTypes: () => void;
   onSave: (values: PlantDetailFormValues) => Promise<void>;
   loading?: boolean;
 }
@@ -42,6 +101,8 @@ export function PlantDetailForm({
   categories,
   pestsCount,
   onOpenPests,
+  careTypesCount,
+  onOpenCareTypes,
   onSave,
   loading,
 }: PlantDetailFormProps) {
@@ -55,6 +116,15 @@ export function PlantDetailForm({
       ? plant.categoryIds
       : plant.categoryId
         ? [plant.categoryId]
+        : [];
+
+  const initialCareTypeIds =
+    Array.isArray(plant.careTypeIds) && plant.careTypeIds.length > 0
+      ? plant.careTypeIds
+      : Array.isArray(plant.careTypes)
+        ? plant.careTypes
+            .map((item) => (typeof item === 'string' ? item : item?.id))
+            .filter(Boolean)
         : [];
 
   const [values, setValues] = useState<PlantDetailFormValues>({
@@ -74,8 +144,15 @@ export function PlantDetailForm({
     fertilizerType: plant.fertilizerType || '',
     lastFertilized: plant.lastFertilized || '',
     lastWatered: plant.lastWatered || '',
-    careTypes: Array.isArray(plant.careTypes) ? plant.careTypes.join(', ') : '',
+    careTypes: initialCareTypeIds.join(', '),
   });
+
+  const [displayLastFertilized, setDisplayLastFertilized] = useState(() =>
+    formatIsoToDisplayDate(plant.lastFertilized || ''),
+  );
+  const [displayLastWatered, setDisplayLastWatered] = useState(() =>
+    formatIsoToDisplayDate(plant.lastWatered || ''),
+  );
 
   const [summaryCategoryId, setSummaryCategoryId] = useState<string>(initialCategoryIds[0] ?? '');
 
@@ -110,8 +187,29 @@ export function PlantDetailForm({
   };
 
   const handleSubmit = async () => {
-    await onSave(values);
+    const nextLastFertilized = parseDisplayDateToIso(displayLastFertilized);
+    const nextLastWatered = parseDisplayDateToIso(displayLastWatered);
+
+    const normalized: PlantDetailFormValues = {
+      ...values,
+      lastFertilized: nextLastFertilized === null ? values.lastFertilized : nextLastFertilized,
+      lastWatered: nextLastWatered === null ? values.lastWatered : nextLastWatered,
+    };
+
+    setValues(normalized);
+    setDisplayLastFertilized(formatIsoToDisplayDate(normalized.lastFertilized));
+    setDisplayLastWatered(formatIsoToDisplayDate(normalized.lastWatered));
+
+    await onSave(normalized);
   };
+
+  const careTypesCountFromInput = useMemo(() => {
+    const ids = values.careTypes
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+    return new Set(ids).size;
+  }, [values.careTypes]);
 
   return (
     <View style={formStyles.card}>
@@ -187,15 +285,7 @@ export function PlantDetailForm({
         </View>
         <View style={formStyles.fieldHalf}>
           <Text style={formStyles.label}>Tóxica</Text>
-          <View style={formStyles.switchRow}>
-            <Switch
-              value={values.toxic}
-              onValueChange={(next) => handleToggle('toxic', next)}
-              trackColor={{ false: theme.colors.muted, true: theme.colors.primary }}
-              thumbColor={theme.colors.card}
-            />
-            <Text style={formStyles.switchText}>{values.toxic ? 'Sí' : 'No'}</Text>
-          </View>
+            <BooleanSwitchRow value={values.toxic} onValueChange={(next) => handleToggle('toxic', next)} />
         </View>
       </View>
 
@@ -226,25 +316,13 @@ export function PlantDetailForm({
       </View>
 
       {selectedCategories.length > 0 ? (
-        <TouchableOpacity
+        <SelectBox
+          text={summaryCategory?.name || selectedCategories[0]?.name}
+          isOpen={isCategorySelectOpen}
           onPress={() => setIsCategorySelectOpen((prev) => !prev)}
-          activeOpacity={0.85}
-          style={formStyles.selectBox}
-          accessibilityRole="button"
           accessibilityLabel="Ver categorías seleccionadas"
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, flex: 1 }}>
-            <View style={formStyles.greenDot} />
-            <Text style={formStyles.selectBoxText} numberOfLines={1}>
-              {summaryCategory?.name || selectedCategories[0]?.name}
-            </Text>
-          </View>
-          <Feather
-            name={isCategorySelectOpen ? 'chevron-up' : 'chevron-down'}
-            size={18}
-            color={theme.colors.mutedForeground}
-          />
-        </TouchableOpacity>
+          leading={<View style={formStyles.greenDot} />}
+        />
       ) : (
         <Text style={[formStyles.helperText, { marginTop: theme.spacing.md }]}>
           Sin categorías seleccionadas.
@@ -433,9 +511,18 @@ export function PlantDetailForm({
           <Text style={formStyles.label}>Última fertilización</Text>
           <TextInput
             style={formStyles.input}
-            value={values.lastFertilized}
-            onChangeText={(text) => handleChange('lastFertilized', text)}
-            placeholder="2026-02-15T08:00:00.000Z"
+            value={displayLastFertilized}
+            onChangeText={setDisplayLastFertilized}
+            onBlur={() => {
+              const parsed = parseDisplayDateToIso(displayLastFertilized);
+              if (parsed === null) {
+                setDisplayLastFertilized(formatIsoToDisplayDate(values.lastFertilized));
+                return;
+              }
+              setValues((prev) => ({ ...prev, lastFertilized: parsed }));
+              setDisplayLastFertilized(formatIsoToDisplayDate(parsed));
+            }}
+            placeholder="DD/MM/AAAA"
             placeholderTextColor={theme.colors.mutedForeground}
           />
         </View>
@@ -445,58 +532,55 @@ export function PlantDetailForm({
         <Text style={formStyles.label}>Último riego</Text>
         <TextInput
           style={formStyles.input}
-          value={values.lastWatered}
-          onChangeText={(text) => handleChange('lastWatered', text)}
-          placeholder="2026-03-01T08:00:00.000Z"
+          value={displayLastWatered}
+          onChangeText={setDisplayLastWatered}
+          onBlur={() => {
+            const parsed = parseDisplayDateToIso(displayLastWatered);
+            if (parsed === null) {
+              setDisplayLastWatered(formatIsoToDisplayDate(values.lastWatered));
+              return;
+            }
+            setValues((prev) => ({ ...prev, lastWatered: parsed }));
+            setDisplayLastWatered(formatIsoToDisplayDate(parsed));
+          }}
+          placeholder="DD/MM/AAAA"
           placeholderTextColor={theme.colors.mutedForeground}
         />
       </View>
 
       <View style={formStyles.fieldGroup}>
-        <Text style={formStyles.label}>Tipos de cuidado (separados por coma)</Text>
-        <TextInput
-          style={formStyles.input}
-          value={values.careTypes}
-          onChangeText={(text) => handleChange('careTypes', text)}
-          placeholder="car-1, car-2"
-          placeholderTextColor={theme.colors.mutedForeground}
+        <CatalogSummaryCard
+          style={{ marginTop: theme.spacing.md }}
+          title="Tipos cuidados"
+          description={
+            careTypesCountFromInput > 0
+              ? `${careTypesCountFromInput} ${careTypesCountFromInput === 1 ? 'tipo' : 'tipos'} de cuidado asignados`
+              : 'No hay tipos de cuidado asignados.'
+          }
+          onView={careTypesCountFromInput > 0 ? onOpenCareTypes : undefined}
+          viewDisabled={careTypesCountFromInput === 0}
+          viewA11yLabel="Ver lista de tipos de cuidado"
+          onAdd={undefined}
+          addDisabled
+          addA11yLabel="Agregar tipo de cuidado"
         />
       </View>
 
       <Text style={[formStyles.sectionTitle, { marginTop: theme.spacing.xl }]}>Plagas</Text>
-      <View style={formStyles.readonlyBox}>
-        <View style={formStyles.pestsRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={formStyles.readonlyTitle}>Plagas registradas</Text>
-            <Text style={formStyles.readonlyDescription}>
-              {pestsCount > 0
-                ? `${pestsCount} ${pestsCount === 1 ? 'plaga' : 'plagas'} en esta planta`
-                : 'No hay plagas registradas.'}
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            onPress={pestsCount > 0 ? onOpenPests : undefined}
-            disabled={pestsCount === 0}
-            activeOpacity={0.85}
-            style={[formStyles.pestsAction, pestsCount === 0 && { opacity: 0.5 }]}
-            accessibilityRole="button"
-            accessibilityLabel="Ver lista de plagas"
-          >
-            <Text style={formStyles.pestsActionText}>Ver lista</Text>
-            <Feather name="chevron-right" size={18} color={theme.colors.mutedForeground} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            disabled
-            style={[formStyles.pestsPlus, { opacity: 0.5 }]}
-            accessibilityRole="button"
-            accessibilityLabel="Agregar plaga"
-          >
-            <Feather name="plus" size={18} color={theme.colors.mutedForeground} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <CatalogSummaryCard
+        title="Plagas registradas"
+        description={
+          pestsCount > 0
+            ? `${pestsCount} ${pestsCount === 1 ? 'plaga' : 'plagas'} en esta planta`
+            : 'No hay plagas registradas.'
+        }
+        onView={pestsCount > 0 ? onOpenPests : undefined}
+        viewDisabled={pestsCount === 0}
+        viewA11yLabel="Ver lista de plagas"
+        onAdd={undefined}
+        addDisabled
+        addA11yLabel="Agregar plaga"
+      />
 
       <Button
         title="Guardar cambios"
@@ -604,25 +688,6 @@ function createFormStyles(theme: AppTheme) {
       color: theme.colors.foreground,
       fontFamily: theme.typography.fontFamily.default,
     },
-    selectBox: {
-      marginTop: theme.spacing.md,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: theme.spacing.md,
-      backgroundColor: theme.colors.muted,
-      borderRadius: theme.radius.md,
-      paddingHorizontal: theme.spacing.md,
-      paddingVertical: theme.spacing.md,
-      borderWidth: 1,
-      borderColor: 'transparent',
-    },
-    selectBoxText: {
-      fontSize: theme.typography.size.base,
-      color: theme.colors.foreground,
-      fontFamily: theme.typography.fontFamily.default,
-      flexShrink: 1,
-    },
     dropdownContainer: {
       marginTop: theme.spacing.sm,
       backgroundColor: theme.colors.card,
@@ -661,20 +726,6 @@ function createFormStyles(theme: AppTheme) {
       borderColor: theme.colors.border,
       marginBottom: theme.spacing.md,
     },
-    switchRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: theme.spacing.md,
-      backgroundColor: theme.colors.muted,
-      borderRadius: theme.radius.md,
-      paddingHorizontal: theme.spacing.md,
-      paddingVertical: theme.spacing.xs,
-    },
-    switchText: {
-      fontSize: theme.typography.size.base,
-      color: theme.colors.foreground,
-      fontFamily: theme.typography.fontFamily.default,
-    },
     readonlyBox: {
       backgroundColor: theme.colors.muted,
       borderRadius: theme.radius.md,
@@ -693,37 +744,6 @@ function createFormStyles(theme: AppTheme) {
       fontSize: theme.typography.size.sm,
       color: theme.colors.mutedForeground,
       fontFamily: theme.typography.fontFamily.default,
-    },
-    pestsRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: theme.spacing.md,
-    },
-    pestsAction: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: theme.spacing.xs,
-      paddingHorizontal: theme.spacing.md,
-      paddingVertical: theme.spacing.sm,
-      borderRadius: theme.radius.md,
-      backgroundColor: theme.colors.card,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-    },
-    pestsActionText: {
-      fontSize: theme.typography.size.sm,
-      color: theme.colors.foreground,
-      fontFamily: theme.typography.fontFamily.semibold,
-    },
-    pestsPlus: {
-      width: 40,
-      height: 40,
-      borderRadius: theme.radius.md,
-      backgroundColor: theme.colors.card,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      alignItems: 'center',
-      justifyContent: 'center',
     },
   });
 }

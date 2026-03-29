@@ -49,7 +49,7 @@ export function PlantCard({ plant, onPress, onToggleFavorite, isTogglingFavorite
             </TouchableOpacity>
           </View>
           <Text style={styles.plantCategory} numberOfLines={1}>
-            {plant.categoryName || 'Sin categoría'}
+            {plant.categoryName || plant.category?.name || 'Sin categoría'}
           </Text>
 
           <View

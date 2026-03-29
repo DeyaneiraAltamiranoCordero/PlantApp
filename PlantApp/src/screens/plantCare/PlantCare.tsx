@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, FlatList, Text, TouchableOpacity, View } from 'react-native';
-import { Plant, getUserPlants, updatePlant } from '../../context/services/api';
+import { Alert, FlatList, Text, View } from 'react-native';
+import { Plant, getUserPlants, prefetchPlantCatalogs, updatePlant } from '../../context/services/api';
 import { useAuth } from '../../context/AuthContext';
 import { usePlantCareStyles } from './PlantCare.style';
 import { PlantCard } from '../../components/screenPlantCare/PlantCard';
 import { PlantDetailPanel } from '../../components/screenPlantCare/PlantDetailPanel';
+import { PlantTabs } from '../../components/screenPlantCare/PlantTabs';
 
 type PlantTab = 'all' | 'favorites' | 'sick';
 
@@ -39,6 +40,10 @@ export default function PlantCareScreen() {
 
   useEffect(() => {
     loadPlants();
+    if (currentUser) {
+      // Prefetch catalogs once so "Agregar" flows have data ready.
+      void prefetchPlantCatalogs();
+    }
   }, [currentUser]);
 
   const isPlantSick = (plant: Plant) => {
@@ -111,23 +116,14 @@ export default function PlantCareScreen() {
         <Text style={styles.headerTitle}>Mis Plantas</Text>
         <Text style={styles.headerSubtitle}>Organizá y edita las plantas que detectaste o cargaste.</Text>
       </View>
-      <View style={styles.tabsContainer}>
-        {tabs.map((tab) => {
-          const isActive = tab.key === activeTab;
-          const count =
-            tab.key === 'favorites' ? favoritesCount : tab.key === 'sick' ? sickCount : plants.length;
-          return (
-            <TouchableOpacity
-              key={tab.key}
-              style={[styles.tab, isActive && styles.tabActive]}
-              onPress={() => setActiveTab(tab.key)}
-            >
-              <Text style={[styles.tabText, isActive && styles.tabTextActive]}>{tab.label}</Text>
-              <Text style={[styles.tabCount, isActive && styles.tabCountActive]}>{count}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      <PlantTabs
+        tabs={tabs.map((tab) => ({
+          ...tab,
+          count: tab.key === 'favorites' ? favoritesCount : tab.key === 'sick' ? sickCount : plants.length,
+        }))}
+        activeTab={activeTab}
+        onChange={setActiveTab}
+      />
       <View style={styles.plantsContainer}>
         <Text style={styles.sectionTitle}>Listado</Text>
       </View>
