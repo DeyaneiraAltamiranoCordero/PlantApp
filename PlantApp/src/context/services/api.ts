@@ -51,6 +51,7 @@ export type Plant = {
   name: string;
   categoryId: string;
   categoryName?: string;
+  categoryIds?: string[];
   age?: string;
   price?: number;
   growthTime?: string;

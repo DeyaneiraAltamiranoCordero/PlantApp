@@ -1,13 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { TouchableOpacity, View, Text, TextInput, StyleSheet, Switch } from 'react-native';
+import { Modal, ScrollView, TouchableOpacity, View, Text, TextInput, StyleSheet, Switch } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { Plant } from '../../context/services/api';
+import { Category, Plant } from '../../context/services/api';
 import { Button } from '../ui/Button';
 import { usePlantCareStyles } from '../../screens/plantCare/PlantCare.style';
 import { AppTheme } from '../../theme/desingSystem';
 
 export type PlantDetailFormValues = {
   name: string;
+  categoryIds: string[];
   age: string;
   flowering: string;
   growthTime: string;
@@ -29,7 +30,7 @@ export type PlantDetailFormValues = {
 
 interface PlantDetailFormProps {
   plant: Plant;
-  categoryDescription?: string;
+  categories: Category[];
   pestsCount: number;
   onOpenPests: () => void;
   onSave: (values: PlantDetailFormValues) => Promise<void>;
@@ -38,7 +39,7 @@ interface PlantDetailFormProps {
 
 export function PlantDetailForm({
   plant,
-  categoryDescription,
+  categories,
   pestsCount,
   onOpenPests,
   onSave,
@@ -46,9 +47,19 @@ export function PlantDetailForm({
 }: PlantDetailFormProps) {
   const { theme } = usePlantCareStyles();
   const formStyles = useMemo(() => createFormStyles(theme), [theme]);
+  const [isCategoryPickerVisible, setIsCategoryPickerVisible] = useState(false);
+  const [isCategorySelectOpen, setIsCategorySelectOpen] = useState(false);
+
+  const initialCategoryIds =
+    Array.isArray(plant.categoryIds) && plant.categoryIds.length > 0
+      ? plant.categoryIds
+      : plant.categoryId
+        ? [plant.categoryId]
+        : [];
 
   const [values, setValues] = useState<PlantDetailFormValues>({
     name: plant.name,
+    categoryIds: initialCategoryIds,
     age: plant.age || '',
     flowering: plant.flowering || '',
     growthTime: plant.growthTime || '',
@@ -65,6 +76,30 @@ export function PlantDetailForm({
     lastWatered: plant.lastWatered || '',
     careTypes: Array.isArray(plant.careTypes) ? plant.careTypes.join(', ') : '',
   });
+
+  const [summaryCategoryId, setSummaryCategoryId] = useState<string>(initialCategoryIds[0] ?? '');
+
+  const selectedCategories = useMemo(() => {
+    const known = new Map(categories.map((cat) => [cat.id, cat]));
+    return values.categoryIds.map((id) => {
+      const match = known.get(id);
+      if (match) return match;
+      return { id, name: id, description: undefined };
+    });
+  }, [categories, values.categoryIds]);
+
+  const summaryCategory = useMemo(
+    () => selectedCategories.find((cat) => cat.id === summaryCategoryId),
+    [selectedCategories, summaryCategoryId],
+  );
+
+  const addCategory = (categoryId: string) => {
+    setValues((prev) => {
+      if (prev.categoryIds.includes(categoryId)) return prev;
+      return { ...prev, categoryIds: [...prev.categoryIds, categoryId] };
+    });
+    setSummaryCategoryId(categoryId);
+  };
 
   const handleChange = (field: keyof PlantDetailFormValues, value: string) => {
     setValues((prev) => ({ ...prev, [field]: value }));
@@ -177,15 +212,162 @@ export function PlantDetailForm({
         </View>
       ) : null}
 
-      <Text style={[formStyles.sectionTitle, { marginTop: theme.spacing.xl }]}>Categoría</Text>
-      <View style={formStyles.readonlyBox}>
-        <Text style={formStyles.readonlyTitle}>{plant.categoryName || 'Sin categoría'}</Text>
-        {categoryDescription ? (
-          <Text style={formStyles.readonlyDescription}>{categoryDescription}</Text>
-        ) : (
-          <Text style={formStyles.readonlyDescription}>Resumen no disponible.</Text>
-        )}
+      <View style={[formStyles.sectionHeaderRow, { marginTop: theme.spacing.xl }]}>
+        <Text style={formStyles.sectionTitle}>Categorías</Text>
+        <TouchableOpacity
+          onPress={() => setIsCategoryPickerVisible(true)}
+          disabled={categories.length === 0}
+          style={[formStyles.headerIconButton, categories.length === 0 && { opacity: 0.5 }]}
+          accessibilityRole="button"
+          accessibilityLabel="Agregar categoría"
+        >
+          <Feather name="plus" size={18} color={theme.colors.mutedForeground} />
+        </TouchableOpacity>
       </View>
+
+      {selectedCategories.length > 0 ? (
+        <TouchableOpacity
+          onPress={() => setIsCategorySelectOpen((prev) => !prev)}
+          activeOpacity={0.85}
+          style={formStyles.selectBox}
+          accessibilityRole="button"
+          accessibilityLabel="Ver categorías seleccionadas"
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, flex: 1 }}>
+            <View style={formStyles.greenDot} />
+            <Text style={formStyles.selectBoxText} numberOfLines={1}>
+              {summaryCategory?.name || selectedCategories[0]?.name}
+            </Text>
+          </View>
+          <Feather
+            name={isCategorySelectOpen ? 'chevron-up' : 'chevron-down'}
+            size={18}
+            color={theme.colors.mutedForeground}
+          />
+        </TouchableOpacity>
+      ) : (
+        <Text style={[formStyles.helperText, { marginTop: theme.spacing.md }]}>
+          Sin categorías seleccionadas.
+        </Text>
+      )}
+
+      {isCategorySelectOpen && selectedCategories.length > 0 ? (
+        <View style={formStyles.dropdownContainer}>
+          {selectedCategories.map((cat) => {
+            const isSelected = cat.id === summaryCategoryId;
+            return (
+              <TouchableOpacity
+                key={cat.id}
+                onPress={() => {
+                  setSummaryCategoryId(cat.id);
+                  setIsCategorySelectOpen(false);
+                }}
+                activeOpacity={0.85}
+                style={[
+                  formStyles.dropdownItem,
+                  isSelected && {
+                    borderColor: theme.colors.primary,
+                    backgroundColor: `${theme.colors.primary}12`,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`Seleccionar ${cat.name}`}
+              >
+                <View style={formStyles.greenDot} />
+                <Text style={formStyles.dropdownItemText} numberOfLines={1}>
+                  {cat.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      ) : null}
+
+      {summaryCategory ? (
+        <View style={[formStyles.readonlyBox, { marginTop: theme.spacing.md }]}>
+          <Text style={formStyles.readonlyTitle}>Resumen</Text>
+          <View style={{ marginTop: theme.spacing.sm }}>
+            <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.fontFamily.semibold }}>
+              {summaryCategory.name}
+            </Text>
+            <Text style={formStyles.readonlyDescription}>
+              {summaryCategory.description || 'Resumen no disponible.'}
+            </Text>
+          </View>
+        </View>
+      ) : null}
+
+      <Modal
+        visible={isCategoryPickerVisible}
+        animationType="slide"
+        onRequestClose={() => setIsCategoryPickerVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+          <View
+            style={{
+              paddingHorizontal: theme.spacing.xl,
+              paddingTop: theme.spacing.lg,
+              paddingBottom: theme.spacing.lg,
+              borderBottomWidth: 1,
+              borderBottomColor: theme.colors.border,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: theme.spacing.md,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: theme.typography.size.xl,
+                fontWeight: theme.typography.weight.bold,
+                color: theme.colors.foreground,
+                fontFamily: theme.typography.fontFamily.bold,
+                flex: 1,
+              }}
+            >
+              Categorías
+            </Text>
+
+            <Button title="Cerrar" variant="secondary" onPress={() => setIsCategoryPickerVisible(false)} />
+          </View>
+
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingHorizontal: theme.spacing.xl, paddingVertical: theme.spacing.lg }}
+          >
+            {categories.map((cat) => {
+              const isSelected = values.categoryIds.includes(cat.id);
+              return (
+                <TouchableOpacity
+                  key={cat.id}
+                  onPress={() => {
+                    addCategory(cat.id);
+                    setIsCategoryPickerVisible(false);
+                  }}
+                  activeOpacity={0.85}
+                  style={[
+                    formStyles.pickerItem,
+                    isSelected && { borderColor: theme.colors.primary, backgroundColor: `${theme.colors.primary}12` },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Agregar categoría ${cat.name}`}
+                >
+                  <View style={formStyles.greenDot} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.fontFamily.semibold }}>
+                      {cat.name}
+                    </Text>
+                    <Text style={formStyles.readonlyDescription} numberOfLines={2}>
+                      {cat.description || 'Resumen no disponible.'}
+                    </Text>
+                  </View>
+                  <Feather name="plus" size={18} color={theme.colors.mutedForeground} />
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </Modal>
 
       <Text style={[formStyles.sectionTitle, { marginTop: theme.spacing.xl }]}>Información adicional</Text>
       <View style={formStyles.fieldGroup}>
@@ -378,6 +560,106 @@ function createFormStyles(theme: AppTheme) {
     },
     fieldHalf: {
       flex: 1,
+    },
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: theme.spacing.md,
+    },
+    headerIconButton: {
+      width: 40,
+      height: 40,
+      borderRadius: theme.radius.md,
+      backgroundColor: theme.colors.card,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    tagsContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: theme.spacing.sm,
+    },
+    tagBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      borderRadius: theme.radius.lg,
+      backgroundColor: theme.colors.card,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    greenDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 10,
+      backgroundColor: theme.colors.primary,
+    },
+    tagText: {
+      fontSize: theme.typography.size.sm,
+      color: theme.colors.foreground,
+      fontFamily: theme.typography.fontFamily.default,
+    },
+    selectBox: {
+      marginTop: theme.spacing.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: theme.spacing.md,
+      backgroundColor: theme.colors.muted,
+      borderRadius: theme.radius.md,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.md,
+      borderWidth: 1,
+      borderColor: 'transparent',
+    },
+    selectBoxText: {
+      fontSize: theme.typography.size.base,
+      color: theme.colors.foreground,
+      fontFamily: theme.typography.fontFamily.default,
+      flexShrink: 1,
+    },
+    dropdownContainer: {
+      marginTop: theme.spacing.sm,
+      backgroundColor: theme.colors.card,
+      borderRadius: theme.radius.xl,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      padding: theme.spacing.md,
+      gap: theme.spacing.sm,
+    },
+    dropdownItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.md,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.md,
+      borderRadius: theme.radius.lg,
+      backgroundColor: theme.colors.muted,
+      borderWidth: 1,
+      borderColor: 'transparent',
+    },
+    dropdownItemText: {
+      flex: 1,
+      fontSize: theme.typography.size.base,
+      color: theme.colors.foreground,
+      fontFamily: theme.typography.fontFamily.default,
+    },
+    pickerItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.md,
+      paddingHorizontal: theme.spacing.lg,
+      paddingVertical: theme.spacing.lg,
+      borderRadius: theme.radius.xl,
+      backgroundColor: theme.colors.card,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      marginBottom: theme.spacing.md,
     },
     switchRow: {
       flexDirection: 'row',

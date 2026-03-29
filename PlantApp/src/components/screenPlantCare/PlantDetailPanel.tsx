@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Image, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { getCategories, Plant, updatePlant } from '../../context/services/api';
+import { Category, getCategories, Plant, updatePlant } from '../../context/services/api';
 import { PlantDetailForm, PlantDetailFormValues } from './PlantDetailForm';
 import { usePlantCareStyles } from '../../screens/plantCare/PlantCare.style';
 import { Button } from '../ui/Button';
@@ -36,7 +36,7 @@ interface PlantDetailPanelProps {
 export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: PlantDetailPanelProps) {
   const { styles, theme } = usePlantCareStyles();
   const [isSaving, setIsSaving] = useState(false);
-  const [categoryDescription, setCategoryDescription] = useState<string | undefined>(undefined);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isPestsVisible, setIsPestsVisible] = useState(false);
 
   useEffect(() => {
@@ -47,22 +47,21 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
   }, [visible]);
 
   useEffect(() => {
-    if (!visible || !plant?.categoryId) {
-      setCategoryDescription(undefined);
+    if (!visible) {
+      setCategories([]);
       return;
     }
 
     let cancelled = false;
     (async () => {
       try {
-        const categories = await getCategories();
-        const match = categories.find((c) => c.id === plant.categoryId);
+        const result = await getCategories();
         if (!cancelled) {
-          setCategoryDescription(match?.description);
+          setCategories(result);
         }
       } catch {
         if (!cancelled) {
-          setCategoryDescription(undefined);
+          setCategories([]);
         }
       }
     })();
@@ -70,7 +69,7 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
     return () => {
       cancelled = true;
     };
-  }, [visible, plant?.categoryId]);
+  }, [visible]);
 
   if (!plant) {
     return null;
@@ -94,6 +93,36 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
     return { id: pestId, ...info };
   };
 
+  const handleRemovePest = async (pestId: string) => {
+    Alert.alert(
+      'Eliminar plaga',
+      '¿Querés eliminar esta plaga de la lista?'
+      ,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const nextPests = pests.filter((id) => id !== pestId);
+              const nextStatus = nextPests.length > 0 ? 'Enferma' : 'Saludable';
+
+              const updated = await updatePlant(plant.id, {
+                pests: nextPests,
+                status: nextStatus,
+              });
+              onPlantUpdated(updated);
+            } catch (error) {
+              console.error('Error eliminando plaga', error);
+              Alert.alert('Error', 'No pudimos eliminar la plaga.');
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const handleSave = async (values: PlantDetailFormValues) => {
     try {
       setIsSaving(true);
@@ -108,9 +137,17 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
       const price = values.price.trim() ? Number(values.price) : undefined;
       const nextStatus = pestsCount > 0 ? 'Enferma' : 'Saludable';
 
+      const nextCategoryIds = Array.isArray(values.categoryIds) ? values.categoryIds : [];
+      const primaryCategoryId = nextCategoryIds[0];
+      const primaryCategory = primaryCategoryId
+        ? categories.find((cat) => cat.id === primaryCategoryId)
+        : undefined;
+
       const updatedPlant = await updatePlant(plant.id, {
         name: values.name,
-        categoryId: plant.categoryId,
+        ...(primaryCategoryId ? { categoryId: primaryCategoryId } : {}),
+        ...(primaryCategory ? { categoryName: primaryCategory.name } : {}),
+        categoryIds: nextCategoryIds,
         description: values.description,
         notes: values.notes,
         age: values.age,
@@ -141,27 +178,7 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
-        {plant.imageUrl ? (
-          <Image
-            source={{ uri: plant.imageUrl }}
-            style={{ width: '100%', height: 220, borderRadius: theme.radius.xl }}
-          />
-        ) : (
-          <View
-            style={{
-              width: '100%',
-              height: 220,
-              borderRadius: theme.radius.xl,
-              backgroundColor: theme.colors.muted,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text style={{ color: theme.colors.mutedForeground }}>Sin imagen</Text>
-          </View>
-        )}
-
-        <View style={{ paddingHorizontal: theme.spacing.xl, paddingTop: theme.spacing.lg }}>
+        <View style={{ paddingHorizontal: theme.spacing.xl, paddingTop: theme.spacing.xl }}>
           <Text
             style={{
               fontSize: theme.typography.size.xxl,
@@ -177,7 +194,7 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
 
           <PlantDetailForm
             plant={plant}
-            categoryDescription={categoryDescription}
+            categories={categories}
             pestsCount={pestsCount}
             onOpenPests={() => setIsPestsVisible(true)}
             onSave={handleSave}
@@ -287,15 +304,39 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
                       marginBottom: theme.spacing.lg,
                     }}
                   >
-                    <Text
-                      style={{
-                        fontSize: theme.typography.size.lg,
-                        color: theme.colors.foreground,
-                        fontFamily: theme.typography.fontFamily.bold,
-                      }}
-                    >
-                      {info.name}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing.md }}>
+                      <Text
+                        style={{
+                          fontSize: theme.typography.size.lg,
+                          color: theme.colors.foreground,
+                          fontFamily: theme.typography.fontFamily.bold,
+                          flex: 1,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {info.name}
+                      </Text>
+
+                      <TouchableOpacity
+                        onPress={() => handleRemovePest(pestId)}
+                        activeOpacity={0.85}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: theme.radius.md,
+                          borderWidth: 1,
+                          borderColor: theme.colors.border,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: theme.colors.card,
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel="Eliminar plaga"
+                      >
+                        <Feather name="trash-2" size={16} color={theme.colors.destructive} />
+                      </TouchableOpacity>
+                    </View>
                     <Text style={{ color: theme.colors.mutedForeground, marginTop: theme.spacing.xs }}>
                       {info.scientificName}
                     </Text>
