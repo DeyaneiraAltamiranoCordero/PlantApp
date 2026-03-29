@@ -1,5 +1,5 @@
 import { StyleSheet } from "react-native";
-import { AppTheme } from "../../theme/desingSystem";
+import { AppTheme, getAppTheme, useTheme } from "../../theme/desingSystem";
 
 export const createPlantCareStyles = (theme: AppTheme) =>
     StyleSheet.create({
@@ -68,6 +68,13 @@ export const createPlantCareStyles = (theme: AppTheme) =>
         plantsContainer: {
             paddingHorizontal: theme.spacing.xl,
             marginTop: theme.spacing.xxl,
+        },
+        sectionTitle: {
+            fontSize: theme.typography.size.lg,
+            fontWeight: theme.typography.weight.bold,
+            color: theme.colors.foreground,
+            fontFamily: theme.typography.fontFamily.bold,
+            marginBottom: theme.spacing.md,
         },
         plantCard: {
             backgroundColor: theme.colors.card,
@@ -320,3 +327,14 @@ export const createPlantCareStyles = (theme: AppTheme) =>
             flex: 1,
         },
     });
+
+const stylesByMode = {
+    light: createPlantCareStyles(getAppTheme("light")),
+    dark: createPlantCareStyles(getAppTheme("dark")),
+};
+
+export function usePlantCareStyles() {
+    const { isDark } = useTheme();
+    const theme = isDark ? getAppTheme("dark") : getAppTheme("light");
+    return { theme, styles: stylesByMode[theme.mode] };
+}

@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { useProfileTheme } from '../../screens/userProfile/UserProfile.styles';
 
 interface ButtonProps {
-    title: string;
+    title?: string;
     onPress: () => void;
     icon?: keyof typeof Feather.glyphMap;
     leftIcon?: ReactNode;
@@ -14,6 +14,7 @@ interface ButtonProps {
     loading?: boolean;
     style?: ViewStyle;
     textStyle?: TextStyle;
+    accessibilityLabel?: string;
 }
 
 export function Button({
@@ -27,15 +28,18 @@ export function Button({
     loading = false,
     style,
     textStyle,
+    accessibilityLabel,
 }: ButtonProps) {
     const { theme } = useProfileTheme();
+
+    const hasTitle = Boolean(title && title.trim().length > 0);
 
     const getButtonStyle = (): ViewStyle => {
         const baseStyle: ViewStyle = {
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: theme.spacing.sm,
+            gap: hasTitle ? theme.spacing.sm : 0,
             borderRadius: theme.spacing.lg,
             ...Platform.select({
                 ios: {
@@ -65,6 +69,21 @@ export function Button({
             },
         };
 
+        const iconOnlySizeStyles = {
+            sm: {
+                paddingHorizontal: theme.spacing.sm,
+                paddingVertical: theme.spacing.sm,
+            },
+            md: {
+                paddingHorizontal: theme.spacing.md,
+                paddingVertical: theme.spacing.md,
+            },
+            lg: {
+                paddingHorizontal: theme.spacing.lg,
+                paddingVertical: theme.spacing.lg,
+            },
+        };
+
         const variantStyles = {
             primary: {
                 backgroundColor: disabled ? theme.colors.muted : theme.colors.primary,
@@ -83,7 +102,7 @@ export function Button({
 
         return {
             ...baseStyle,
-            ...sizeStyles[size],
+            ...(hasTitle ? sizeStyles[size] : iconOnlySizeStyles[size]),
             ...variantStyles[variant],
             ...style,
         };
@@ -154,6 +173,8 @@ export function Button({
             onPress={onPress}
             disabled={disabled || loading}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={accessibilityLabel ?? title}
         >
             {loading ? (
                 <ActivityIndicator
@@ -169,9 +190,11 @@ export function Button({
                     color={getIconColor()}
                 />
             ) : null}
-            <Text style={getTextStyle()}>
-                {loading ? 'Cargando...' : title}
-            </Text>
+            {hasTitle ? (
+                <Text style={getTextStyle()}>
+                    {loading ? 'Cargando...' : title}
+                </Text>
+            ) : null}
         </TouchableOpacity>
     );
 }

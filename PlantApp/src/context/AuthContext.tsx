@@ -1,7 +1,12 @@
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
-import firestore from '@react-native-firebase/firestore';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import {
+  ApiError,
+  createUserProfile,
+  getUserByUid,
+  updateUserProfile,
+} from './services/api';
 
 GoogleSignin.configure({
   webClientId: '671777128731-hkd03bgupqjj5sq0flk2phit94c8ql4s.apps.googleusercontent.com',
@@ -20,25 +25,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<FirebaseAuthTypes.User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const syncUserToFirestore = async (user: FirebaseAuthTypes.User) => {
+  const syncUserToApi = async (user: FirebaseAuthTypes.User) => {
+    const displayName = user.displayName ?? '';
+    const [firstName, ...rest] = displayName.split(' ').filter(Boolean);
+    const fallbackName = firstName || 'Usuario';
+    const lastName = rest.join(' ');
+    const nicknameFromEmail = user.email?.split('@')[0] || `plantLover_${user.uid.substring(0, 4)}`;
+
+    const basePayload = {
+      authUid: user.uid,
+      email: user.email ?? '',
+      name: fallbackName,
+      nickname: nicknameFromEmail,
+      profilePicture: user.photoURL ?? null,
+      lastName: lastName || undefined,
+      publicProfile: true,
+    };
+
     try {
-      const userRef = firestore().collection('users').doc(user.uid);
-      const userDoc = await userRef.get();
-      if (!userDoc.exists) {
-        await userRef.set({
-          id: user.uid,
-          name: user.displayName?.split(' ')[0] || 'Usuario',
-          lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
-          nickname: `plantLover_${user.uid.substring(0, 4)}`,
-          email: user.email || '',
-          profilePicture: user.photoURL || '',
-          plantCount: 0,
-          streak: 0,
-          registrationDate: new Date().toISOString(),
-        }, { merge: true });
-      }
+      await getUserByUid(user.uid);
     } catch (error) {
-      console.error('Error al sincronizar usuario:', error);
+      if (error instanceof ApiError && error.status === 404) {
+        await createUserProfile(basePayload);
+        return;
+      }
+      console.error('Error sincronizando usuario con la API:', error);
     }
   };
 
@@ -46,8 +57,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = auth().onAuthStateChanged(async (user) => {
       try {
         if (user) {
-          await syncUserToFirestore(user);
+          // Don't block initial render on API sync (backend may be offline/unreachable).
           setCurrentUser(user);
+          void syncUserToApi(user).catch((error) => {
+            console.error('Error sincronizando usuario con la API:', error);
+          });
         } else {
           setCurrentUser(null);
         }

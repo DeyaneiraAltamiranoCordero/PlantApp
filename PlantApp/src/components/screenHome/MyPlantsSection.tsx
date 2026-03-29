@@ -1,20 +1,18 @@
 import React from 'react';
-import { View, Text, TextInput } from 'react-native';
+import { View, Text } from 'react-native';
 import { Feather, FontAwesome5 } from '@expo/vector-icons';
 import { useProfileTheme } from '../../screens/userProfile/UserProfile.styles';
 
 interface MyPlantsSectionProps {
-    favoritePlant: string;
+    favoritePlants: string[];
     plantCategories: string[];
-    onFavoritePlantChange: (val: string) => void;
 }
 
 export function MyPlantsSection({
-    favoritePlant,
+    favoritePlants,
     plantCategories,
-    onFavoritePlantChange
 }: MyPlantsSectionProps) {
-    const { theme, styles } = useProfileTheme();
+    const { styles, theme } = useProfileTheme();
 
     return (
         <View style={styles.formCard}>
@@ -23,23 +21,29 @@ export function MyPlantsSection({
                 <Text style={styles.formTitle}>Mis Plantas</Text>
             </View>
 
-            {/* Planta Favorita */}
-            <View style={styles.fieldContainer}>
+            <View style={{ gap: theme.spacing.md }}>
                 <View style={styles.labelContainer}>
                     <Feather name="heart" size={16} color={styles.heartIcon.color} />
-                    <Text style={styles.label}>Planta Favorita</Text>
+                    <Text style={styles.subtitleLabel}>PLANTAS FAVORITAS</Text>
                 </View>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Ej: Monstera Deliciosa"
-                    placeholderTextColor={theme.colors.mutedForeground}
-                    value={favoritePlant}
-                    onChangeText={onFavoritePlantChange}
-                />
+
+                {favoritePlants.length > 0 ? (
+                    <View style={styles.tagsContainer}>
+                        {favoritePlants.map((plantName) => (
+                            <View key={plantName} style={styles.tagBadge}>
+                                <Feather name="heart" size={12} color={styles.heartIcon.color} />
+                                <Text style={styles.tagText}>{plantName}</Text>
+                            </View>
+                        ))}
+                    </View>
+                ) : (
+                    <Text style={styles.emptyText}>
+                        No tienes plantas favoritas aún.
+                    </Text>
+                )}
             </View>
 
-            {/* Categorias */}
-            <View style={{ gap: 12 }}>
+            <View style={{ gap: theme.spacing.md }}>
                 <View style={styles.labelContainer}>
                     <Feather name="list" size={16} color={styles.unifiedIcon.color} />
                     <Text style={styles.subtitleLabel}>CATEGORÍAS</Text>

@@ -2,7 +2,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from "react";
 import { ActivityIndicator, View } from "react-native";
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
 import TabNavigator from "./src/navegation/barNavegation";
@@ -27,7 +27,11 @@ function Navigation() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }} edges={['top']}>
       <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={currentUser ? "Main" : "Login"}>
+        <Stack.Navigator
+          key={currentUser ? 'auth' : 'guest'}
+          screenOptions={{ headerShown: false }}
+          initialRouteName={currentUser ? "Main" : "Login"}
+        >
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Main" component={TabNavigator} />
           <Stack.Screen name="UserProfile" component={UserProfileScreen} />
@@ -39,12 +43,14 @@ function Navigation() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
-          <Navigation />
-        </View>
-      </AuthProvider>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
+            <Navigation />
+          </View>
+        </AuthProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }

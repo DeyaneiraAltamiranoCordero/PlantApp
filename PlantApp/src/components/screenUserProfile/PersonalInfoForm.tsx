@@ -5,28 +5,34 @@ import { Input } from '../ui/Input';
 
 interface PersonalInfoFormProps {
     name: string;
+    lastName: string;
+    secondLastName: string;
     nickname: string;
     birthday: string;
     description: string;
-    bibliography: string;
+    email: string;
     onNameChange: (val: string) => void;
+    onLastNameChange: (val: string) => void;
+    onSecondLastNameChange: (val: string) => void;
     onNicknameChange: (val: string) => void;
     onBirthdayChange: (val: string) => void;
     onDescriptionChange: (val: string) => void;
-    onBibliographyChange: (val: string) => void;
 }
 
 export function PersonalInfoForm({
     name,
+    lastName,
+    secondLastName,
     nickname,
     birthday,
     description,
-    bibliography,
+    email,
     onNameChange,
+    onLastNameChange,
+    onSecondLastNameChange,
     onNicknameChange,
     onBirthdayChange,
     onDescriptionChange,
-    onBibliographyChange
 }: PersonalInfoFormProps) {
     const { styles } = useProfileTheme();
 
@@ -43,11 +49,34 @@ export function PersonalInfoForm({
             />
 
             <Input
+                label="Primer apellido"
+                iconName="user"
+                placeholder="Tu primer apellido"
+                value={lastName}
+                onChangeText={onLastNameChange}
+            />
+
+            <Input
+                label="Segundo apellido"
+                iconName="user"
+                placeholder="Tu segundo apellido"
+                value={secondLastName}
+                onChangeText={onSecondLastNameChange}
+            />
+
+            <Input
                 label="Apodo"
                 iconName="at-sign"
                 placeholder="Tu apodo"
                 value={nickname}
                 onChangeText={onNicknameChange}
+            />
+
+            <Input
+                label="Correo"
+                iconName="mail"
+                value={email}
+                editable={false}
             />
 
             <Input
@@ -64,15 +93,6 @@ export function PersonalInfoForm({
                 placeholder="Cuéntanos sobre ti y tu amor por las plantas..."
                 value={description}
                 onChangeText={onDescriptionChange}
-                multiline
-            />
-
-            <Input
-                label="Bibliografía"
-                iconName="book"
-                placeholder="Enlaces, fuentes o libros recomendados..."
-                value={bibliography}
-                onChangeText={onBibliographyChange}
                 multiline
             />
         </View>
