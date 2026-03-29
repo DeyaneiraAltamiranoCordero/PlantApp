@@ -170,10 +170,18 @@ export function useUserProfileController({ currentUser }: Params) {
         publicProfile: !isPrivate,
       });
 
-      Alert.alert('¡Éxito!', 'Tus cambios han sido guardados correctamente.');
+      showToast({
+        kind: 'success',
+        title: 'Aviso',
+        message: 'Cambios guardados con éxito.',
+      });
     } catch (error) {
       console.error('Error al guardar:', error);
-      Alert.alert('Error', 'No se pudieron guardar los cambios.');
+      showToast({
+        kind: 'error',
+        title: 'Error',
+        message: 'No se pudieron guardar los cambios.',
+      });
     } finally {
       setIsSaving(false);
     }

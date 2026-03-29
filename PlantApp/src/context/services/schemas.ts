@@ -24,6 +24,50 @@ export const ISODateStringSchema = z
     return dtYear === year && dtMonth === month && dtDay === day;
   }, 'Fecha inválida.');
 
+export const PlantCareDateInputSchema = z
+  .string()
+  .transform((value) => value.trim())
+  .refine((value) => {
+    if (!value) return true;
+
+    // DD/MM/YYYY or DD-MM-YYYY
+    const dmY = value.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (dmY) {
+      const day = Number(dmY[1]);
+      const month = Number(dmY[2]);
+      const year = Number(dmY[3]);
+      if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return false;
+      if (month < 1 || month > 12 || day < 1 || day > 31) return false;
+      const dt = new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
+      return (
+        dt.getUTCFullYear() === year &&
+        dt.getUTCMonth() + 1 === month &&
+        dt.getUTCDate() === day
+      );
+    }
+
+    // YYYY-MM-DD
+    const yMd = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (yMd) {
+      const year = Number(yMd[1]);
+      const month = Number(yMd[2]);
+      const day = Number(yMd[3]);
+      if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return false;
+      if (month < 1 || month > 12 || day < 1 || day > 31) return false;
+      const dt = new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
+      return (
+        dt.getUTCFullYear() === year &&
+        dt.getUTCMonth() + 1 === month &&
+        dt.getUTCDate() === day
+      );
+    }
+
+    // Otherwise accept any parseable ISO/date string.
+    const parsed = new Date(value);
+    return !Number.isNaN(parsed.getTime());
+  }, 'Fecha inválida. Usá DD/MM/AAAA o YYYY-MM-DD.')
+  .transform((value) => value);
+
 export const CategorySchema = z
   .object({
     id: z.string(),

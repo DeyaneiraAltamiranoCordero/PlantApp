@@ -53,7 +53,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const showToast = React.useCallback(
     (input: ToastInput) => {
       const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-      const durationMs = input.durationMs ?? 4500;
+      const durationMs = input.durationMs ?? 8000;
 
       const item: ToastItem = {
         id,
@@ -92,7 +92,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             styles.stack,
             {
               top: insets.top + theme.spacing.lg,
-              right: theme.spacing.lg,
+              left: 0,
+              right: 0,
             },
           ]}
         >
@@ -116,7 +117,8 @@ function createStyles(theme: ReturnType<typeof useTheme>['theme']) {
     stack: {
       position: 'absolute',
       gap: theme.spacing.md,
-      alignItems: 'flex-end',
+      alignItems: 'center',
+      paddingHorizontal: theme.spacing.lg,
     },
   });
 }

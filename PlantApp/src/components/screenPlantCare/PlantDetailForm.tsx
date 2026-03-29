@@ -8,6 +8,8 @@ import { CatalogSummaryCard } from '../ui/CatalogSummaryCard';
 import { SelectBox } from '../ui/SelectBox';
 import { usePlantCareStyles } from '../../screens/plantCare/PlantCare.style';
 import { AppTheme } from '../../theme/desingSystem';
+import { useToast } from '../../context/ToastContext';
+import { PlantCareDateInputSchema } from '../../context/services/schemas';
 
 const pad2 = (value: number) => String(value).padStart(2, '0');
 
@@ -107,6 +109,7 @@ export function PlantDetailForm({
   loading,
 }: PlantDetailFormProps) {
   const { theme } = usePlantCareStyles();
+  const { showToast } = useToast();
   const formStyles = useMemo(() => createFormStyles(theme), [theme]);
   const [isCategoryPickerVisible, setIsCategoryPickerVisible] = useState(false);
   const [isCategorySelectOpen, setIsCategorySelectOpen] = useState(false);
@@ -187,8 +190,50 @@ export function PlantDetailForm({
   };
 
   const handleSubmit = async () => {
+    const lastFertilizedInput = displayLastFertilized.trim();
+    const lastWateredInput = displayLastWatered.trim();
+
+    const fertilizedValidation = PlantCareDateInputSchema.safeParse(lastFertilizedInput);
+    if (!fertilizedValidation.success) {
+      showToast({
+        kind: 'warning',
+        title: 'Aviso',
+        message: `Última fertilización: ${fertilizedValidation.error.issues[0]?.message ?? 'Fecha inválida.'}`,
+      });
+      return;
+    }
+
+    const wateredValidation = PlantCareDateInputSchema.safeParse(lastWateredInput);
+    if (!wateredValidation.success) {
+      showToast({
+        kind: 'warning',
+        title: 'Aviso',
+        message: `Último riego: ${wateredValidation.error.issues[0]?.message ?? 'Fecha inválida.'}`,
+      });
+      return;
+    }
+
     const nextLastFertilized = parseDisplayDateToIso(displayLastFertilized);
     const nextLastWatered = parseDisplayDateToIso(displayLastWatered);
+
+    // Should not happen if Zod validation above passed, but keep it safe.
+    if (lastFertilizedInput && nextLastFertilized === null) {
+      showToast({
+        kind: 'warning',
+        title: 'Aviso',
+        message: 'Última fertilización: Fecha inválida. Usá DD/MM/AAAA o YYYY-MM-DD.',
+      });
+      return;
+    }
+
+    if (lastWateredInput && nextLastWatered === null) {
+      showToast({
+        kind: 'warning',
+        title: 'Aviso',
+        message: 'Último riego: Fecha inválida. Usá DD/MM/AAAA o YYYY-MM-DD.',
+      });
+      return;
+    }
 
     const normalized: PlantDetailFormValues = {
       ...values,
