@@ -5,6 +5,7 @@ import { ActivityIndicator, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
+import { ToastProvider } from './src/context/ToastContext';
 import TabNavigator from "./src/navegation/barNavegation";
 import LoginScreen from './src/screens/login/Login';
 import UserProfileScreen from './src/screens/userProfile/UserProfile';
@@ -45,11 +46,13 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <AuthProvider>
-          <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
-            <Navigation />
-          </View>
-        </AuthProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
+              <Navigation />
+            </View>
+          </AuthProvider>
+        </ToastProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

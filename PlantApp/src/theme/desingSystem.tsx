@@ -20,6 +20,8 @@ interface ThemeColors {
     mutedForeground: string;
     accent: string;
     accentForeground: string;
+    warning: string;
+    warningForeground: string;
     destructive: string;
     destructiveForeground: string;
     border: string;
@@ -140,6 +142,8 @@ const lightColors: ThemeColors = {
     mutedForeground: '#7A6E72',
     accent: '#E8F0E4',
     accentForeground: '#3D4A32',
+    warning: '#F5B301',
+    warningForeground: '#3A2A00',
     destructive: '#D94F4F',
     destructiveForeground: '#6f1717',
     border: '#E8DDE1',
@@ -164,6 +168,8 @@ const darkColors: ThemeColors = {
     mutedForeground: '#A09A94',
     accent: '#3D2E34',
     accentForeground: '#F6C4D1',
+    warning: '#F5B301',
+    warningForeground: '#131908ff',
     destructive: '#8B2E2E',
     destructiveForeground: '#6f1717',
     border: '#3A3E34',

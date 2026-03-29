@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, FlatList, Text, View } from 'react-native';
-import { Plant, getUserPlants, prefetchPlantCatalogs, updatePlant } from '../../context/services/api';
+import { ApiError, ApiValidationError, Plant, getUserPlants, prefetchPlantCatalogs, updatePlant } from '../../context/services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 import { usePlantCareStyles } from './PlantCare.style';
 import { PlantCard } from '../../components/screenPlantCare/PlantCard';
 import { PlantDetailPanel } from '../../components/screenPlantCare/PlantDetailPanel';
@@ -18,21 +19,45 @@ const tabs: { key: PlantTab; label: string }[] = [
 export default function PlantCareScreen() {
   const { currentUser } = useAuth();
   const { styles, theme } = usePlantCareStyles();
+  const { showToast } = useToast();
   const [plants, setPlants] = useState<Plant[]>([]);
   const [activeTab, setActiveTab] = useState<PlantTab>('all');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedPlant, setSelectedPlant] = useState<Plant | null>(null);
   const [togglingFavoriteIds, setTogglingFavoriteIds] = useState<string[]>([]);
 
-  const loadPlants = async () => {
+  const loadPlants = async (options?: { showToastOnSuccess?: boolean }) => {
     if (!currentUser) return;
     try {
       setIsLoading(true);
       const response = await getUserPlants(currentUser.uid);
       setPlants(response);
+
+      if (options?.showToastOnSuccess) {
+        if (response.length === 0) {
+          showToast({
+            kind: 'warning',
+            title: 'Aviso',
+            message: 'No tenés plantas registradas todavía.',
+          });
+        } else {
+          showToast({
+            kind: 'success',
+            title: 'Listo',
+            message: 'Actualizamos tu lista de plantas.',
+          });
+        }
+      }
     } catch (error) {
       console.error('Error al obtener plantas', error);
-      Alert.alert('Error', 'No pudimos cargar tus plantas.');
+      const message =
+        error instanceof ApiValidationError
+          ? 'La API devolvió datos inválidos. Intentá nuevamente.'
+          : error instanceof ApiError
+            ? error.message
+            : 'No pudimos cargar tus plantas.';
+
+      showToast({ kind: 'error', title: 'Error', message });
     } finally {
       setIsLoading(false);
     }
@@ -147,7 +172,7 @@ export default function PlantCareScreen() {
         )}
         ListHeaderComponent={renderHeader}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 140 }]}
-        onRefresh={loadPlants}
+        onRefresh={() => loadPlants({ showToastOnSuccess: true })}
         refreshing={isLoading}
         ListEmptyComponent={
           !isLoading ? (

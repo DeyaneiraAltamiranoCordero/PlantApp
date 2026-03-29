@@ -1,13 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { CareType, Category, getCareTypes, getCategories, getPestDocument, getPests, Pest, Plant, updatePlant } from '../../context/services/api';
+import { ApiError, ApiValidationError, CareType, Category, getCareTypes, getCategories, getPestDocument, getPests, Pest, Plant, updatePlant } from '../../context/services/api';
 import { PlantDetailForm, PlantDetailFormValues } from './PlantDetailForm';
 import { usePlantCareStyles } from '../../screens/plantCare/PlantCare.style';
 import { Button } from '../ui/Button';
 import { AddItemCard } from '../ui/AddItemCard';
 import { InfoCard } from '../ui/InfoCard';
 import { ModalHeader } from '../ui/ModalHeader';
+import { useToast } from '../../context/ToastContext';
 
 type CareTypeInfo = {
   id: string;
@@ -51,6 +52,7 @@ interface PlantDetailPanelProps {
 
 export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: PlantDetailPanelProps) {
   const { styles, theme } = usePlantCareStyles();
+  const { showToast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isPestsVisible, setIsPestsVisible] = useState(false);
@@ -184,6 +186,14 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
       console.error('Error cargando tipos de cuidado', error);
       setCareTypesCatalog([]);
       setCareTypesError('No pudimos cargar los tipos de cuidado desde la API.');
+
+      const message =
+        error instanceof ApiValidationError
+          ? 'La API devolvió datos inválidos.'
+          : error instanceof ApiError
+            ? error.message
+            : 'No pudimos cargar los tipos de cuidado.';
+      showToast({ kind: 'error', title: 'Error', message });
     } finally {
       setIsCareTypesLoading(false);
     }
@@ -202,6 +212,14 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
       console.error('Error cargando plagas', error);
       setPestsCatalog([]);
       setPestsError('No pudimos cargar las plagas desde la API.');
+
+      const message =
+        error instanceof ApiValidationError
+          ? 'La API devolvió datos inválidos.'
+          : error instanceof ApiError
+            ? error.message
+            : 'No pudimos cargar las plagas.';
+      showToast({ kind: 'error', title: 'Error', message });
     } finally {
       setIsPestsLoading(false);
     }
@@ -322,9 +340,21 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
                 status: nextStatus,
               });
               onPlantUpdated(updated);
+
+                  showToast({
+                    kind: 'success',
+                    title: 'Listo',
+                    message: 'Eliminamos la plaga de tu planta.',
+                  });
             } catch (error) {
               console.error('Error eliminando plaga', error);
-              Alert.alert('Error', 'No pudimos eliminar la plaga.');
+                  const message =
+                    error instanceof ApiValidationError
+                      ? 'La API devolvió datos inválidos.'
+                      : error instanceof ApiError
+                        ? error.message
+                        : 'No pudimos eliminar la plaga.';
+                  showToast({ kind: 'error', title: 'Error', message });
             }
           },
         },
@@ -343,10 +373,16 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
       });
       onPlantUpdated(updated);
       setIsAddPestVisible(false);
-      Alert.alert('Listo', 'Agregamos la plaga a tu planta.');
+      showToast({ kind: 'success', title: 'Listo', message: 'Agregamos la plaga a tu planta.' });
     } catch (error) {
       console.error('Error agregando plaga', error);
-      Alert.alert('Error', 'No pudimos agregar la plaga.');
+      const message =
+        error instanceof ApiValidationError
+          ? 'La API devolvió datos inválidos.'
+          : error instanceof ApiError
+            ? error.message
+            : 'No pudimos agregar la plaga.';
+      showToast({ kind: 'error', title: 'Error', message });
     }
   };
 
@@ -359,10 +395,16 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
       });
       onPlantUpdated(updated);
       setIsAddCareTypeVisible(false);
-      Alert.alert('Listo', 'Agregamos el tipo de cuidado a tu planta.');
+      showToast({ kind: 'success', title: 'Listo', message: 'Agregamos el tipo de cuidado a tu planta.' });
     } catch (error) {
       console.error('Error agregando tipo de cuidado', error);
-      Alert.alert('Error', 'No pudimos agregar el tipo de cuidado.');
+      const message =
+        error instanceof ApiValidationError
+          ? 'La API devolvió datos inválidos.'
+          : error instanceof ApiError
+            ? error.message
+            : 'No pudimos agregar el tipo de cuidado.';
+      showToast({ kind: 'error', title: 'Error', message });
     }
   };
 
@@ -409,10 +451,16 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
         status: nextStatus,
       });
       onPlantUpdated(updatedPlant);
-      Alert.alert('Listo', 'Guardamos los cambios de tu planta.');
+      showToast({ kind: 'success', title: 'Listo', message: 'Guardamos los cambios de tu planta.' });
     } catch (error) {
       console.error('Error actualizando planta', error);
-      Alert.alert('Error', 'No pudimos guardar los cambios.');
+      const message =
+        error instanceof ApiValidationError
+          ? 'La API devolvió datos inválidos.'
+          : error instanceof ApiError
+            ? error.message
+            : 'No pudimos guardar los cambios.';
+      showToast({ kind: 'error', title: 'Error', message });
     } finally {
       setIsSaving(false);
     }

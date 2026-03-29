@@ -1,4 +1,6 @@
 import { auth as firebaseAuth } from '../../config/firebase';
+import { z } from 'zod';
+import { CareTypesArraySchema, CategoriesArraySchema, PestsArraySchema, PlantSchema, PlantsArraySchema } from './schemas';
 
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://192.168.100.104:8000';
@@ -15,6 +17,17 @@ export class ApiError extends Error {
   constructor(message: string, status: number, body?: unknown) {
     super(message);
     this.status = status;
+    this.body = body;
+  }
+}
+
+export class ApiValidationError extends Error {
+  issues: z.ZodIssue[];
+  body?: unknown;
+
+  constructor(message: string, issues: z.ZodIssue[], body?: unknown) {
+    super(message);
+    this.issues = issues;
     this.body = body;
   }
 }
@@ -379,7 +392,23 @@ async function getAuthToken(): Promise<string> {
   return user.getIdToken(true);
 }
 
-async function apiRequest<T>(path: string, options: ApiOptions = {}): Promise<T> {
+function isZodSchema(value: unknown): value is z.ZodTypeAny {
+  return Boolean(value) && typeof (value as z.ZodTypeAny).safeParse === 'function';
+}
+
+async function apiRequest<T>(path: string, options?: ApiOptions): Promise<T>;
+async function apiRequest<T>(path: string, schema?: z.ZodType<T>): Promise<T>;
+async function apiRequest<T>(path: string, options: ApiOptions, schema: z.ZodType<T>): Promise<T>;
+async function apiRequest<T>(
+  path: string,
+  optionsOrSchema: ApiOptions | z.ZodType<T> = {},
+  maybeSchema?: z.ZodType<T>,
+): Promise<T> {
+  const options: ApiOptions = isZodSchema(optionsOrSchema) ? {} : (optionsOrSchema as ApiOptions);
+  const schema: z.ZodType<T> | undefined = isZodSchema(optionsOrSchema)
+    ? (optionsOrSchema as z.ZodType<T>)
+    : maybeSchema;
+
   const token = await getAuthToken();
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: options.method ?? 'GET',
@@ -404,7 +433,14 @@ async function apiRequest<T>(path: string, options: ApiOptions = {}): Promise<T>
     throw new ApiError(message, response.status, body);
   }
 
-  return response.json() as Promise<T>;
+  const body = (await response.json()) as unknown;
+  if (!schema) return body as T;
+
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) {
+    throw new ApiValidationError('Respuesta inválida de la API.', parsed.error.issues, body);
+  }
+  return parsed.data;
 }
 
 export async function getUserProfile(
@@ -444,28 +480,28 @@ export async function updateUserProfile(
 }
 
 export async function getPlants(): Promise<Plant[]> {
-  return apiRequest<Plant[]>(`/api/plants`);
+  return apiRequest(`/api/plants`, PlantsArraySchema);
 }
 
 export async function getUserPlants(userUid: string): Promise<Plant[]> {
-  return apiRequest<Plant[]>(`/api/users/${userUid}/plants`);
+  return apiRequest(`/api/users/${userUid}/plants`, PlantsArraySchema);
 }
 
 export async function createPlant(payload: CreatePlantPayload): Promise<Plant> {
-  return apiRequest<Plant>(`/api/plants`, {
+  return apiRequest(`/api/plants`, {
     method: 'POST',
     body: payload,
-  });
+  }, PlantSchema);
 }
 
 export async function updatePlant(
   plantId: string,
   payload: UpdatePlantPayload,
 ): Promise<Plant> {
-  return apiRequest<Plant>(`/api/plants/${plantId}`, {
+  return apiRequest(`/api/plants/${plantId}`, {
     method: 'PATCH',
     body: payload,
-  });
+  }, PlantSchema);
 }
 
 export async function getCategories(options?: { forceRefresh?: boolean }): Promise<Category[]> {
@@ -473,7 +509,7 @@ export async function getCategories(options?: { forceRefresh?: boolean }): Promi
     return categoriesCache;
   }
 
-  const result = await apiRequest<Category[]>(`/api/categories`);
+  const result = await apiRequest(`/api/categories`, CategoriesArraySchema);
   categoriesCache = Array.isArray(result) ? result : [];
   return categoriesCache;
 }
@@ -484,18 +520,18 @@ export async function getCareTypes(options?: { forceRefresh?: boolean }): Promis
   }
 
   try {
-    const result = await apiRequest<CareType[]>(`/api/care-types`);
+    const result = await apiRequest(`/api/care-types`, CareTypesArraySchema);
     careTypesCache = Array.isArray(result) ? result : [];
     return careTypesCache;
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       try {
-        const result = await apiRequest<CareType[]>(`/api/careTypes`);
+        const result = await apiRequest(`/api/careTypes`, CareTypesArraySchema);
         careTypesCache = Array.isArray(result) ? result : [];
         return careTypesCache;
       } catch (fallbackError) {
         if (fallbackError instanceof ApiError && fallbackError.status === 404) {
-          const result = await apiRequest<CareType[]>(`/api/caretypes`);
+          const result = await apiRequest(`/api/caretypes`, CareTypesArraySchema);
           careTypesCache = Array.isArray(result) ? result : [];
           return careTypesCache;
         }
@@ -512,18 +548,32 @@ export async function getPests(options?: { forceRefresh?: boolean }): Promise<Pe
   }
 
   try {
-    const result = await apiRequest<Pest[]>(`/api/pests`);
-    pestsCache = Array.isArray(result)
+    const result = await apiRequest<unknown[]>(`/api/pests`);
+    const normalized = Array.isArray(result)
       ? result.map((item) => normalizePest(item)).filter((item): item is Pest => Boolean(item))
       : [];
+
+    const parsed = PestsArraySchema.safeParse(normalized);
+    if (!parsed.success) {
+      throw new ApiValidationError('Respuesta inválida de la API.', parsed.error.issues, result);
+    }
+
+    pestsCache = parsed.data;
     return pestsCache;
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       // Fallback for older routes if any
-      const result = await apiRequest<Pest[]>(`/api/pest`);
-      pestsCache = Array.isArray(result)
+      const result = await apiRequest<unknown[]>(`/api/pest`);
+      const normalized = Array.isArray(result)
         ? result.map((item) => normalizePest(item)).filter((item): item is Pest => Boolean(item))
         : [];
+
+      const parsed = PestsArraySchema.safeParse(normalized);
+      if (!parsed.success) {
+        throw new ApiValidationError('Respuesta inválida de la API.', parsed.error.issues, result);
+      }
+
+      pestsCache = parsed.data;
       return pestsCache;
     }
     throw error;
