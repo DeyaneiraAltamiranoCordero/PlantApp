@@ -1,9 +1,19 @@
-import { auth as firebaseAuth } from '../../config/firebase';
+import { getAuth, getIdToken } from '@react-native-firebase/auth';
+import { Platform } from 'react-native';
 import { z } from 'zod';
 import { CareTypesArraySchema, CategoriesArraySchema, ISODateStringSchema, PestsArraySchema, PlantSchema, PlantsArraySchema } from './schemas';
 
-const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://192.168.100.104:8000';
+function resolveApiBaseUrl(): string {
+  const configured = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
+  if (configured) return configured;
+
+  // Android emulator cannot reach localhost directly; 10.0.2.2 maps to host machine.
+  if (Platform.OS === 'android') return 'http://10.0.2.2:8000';
+  if (Platform.OS === 'ios' || Platform.OS === 'web') return 'http://localhost:8000';
+  return 'http://127.0.0.1:8000';
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 type ApiOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -385,11 +395,15 @@ export type CreatePlantPayload = Omit<Plant, 'id'>;
 export type UpdatePlantPayload = Partial<Omit<Plant, 'id'>>;
 
 async function getAuthToken(): Promise<string> {
-  const user = firebaseAuth().currentUser;
+  if (Platform.OS === 'web') {
+    throw new Error('Firebase Auth nativo no esta disponible en Web.');
+  }
+
+  const user = getAuth().currentUser;
   if (!user) {
     throw new Error('No authenticated user');
   }
-  return user.getIdToken(true);
+  return getIdToken(user, true);
 }
 
 function isZodSchema(value: unknown): value is z.ZodTypeAny {
@@ -410,14 +424,19 @@ async function apiRequest<T>(
     : maybeSchema;
 
   const token = await getAuthToken();
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: options.method ?? 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      method: options.method ?? 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+  } catch {
+    throw new Error(`No se pudo conectar con la API en ${API_BASE_URL}. Verifica que el backend este encendido o define EXPO_PUBLIC_API_BASE_URL.`);
+  }
 
   if (!response.ok) {
     let message = `Request failed: ${response.status}`;

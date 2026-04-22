@@ -109,31 +109,27 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
     };
   }, [visible]);
 
-  if (!plant) {
-    return null;
-  }
-
   const pestIds =
-    Array.isArray(plant.pestIds) && plant.pestIds.length > 0
+    Array.isArray(plant?.pestIds) && plant.pestIds.length > 0
       ? plant.pestIds
-      : normalizeIdArray(plant.pests);
+      : normalizeIdArray(plant?.pests);
   const pestsCount = pestIds.length;
 
   const careTypeIds =
-    Array.isArray(plant.careTypeIds) && plant.careTypeIds.length > 0
+    Array.isArray(plant?.careTypeIds) && plant.careTypeIds.length > 0
       ? plant.careTypeIds
-      : normalizeIdArray(plant.careTypes);
+      : normalizeIdArray(plant?.careTypes);
   const careTypesCount = careTypeIds.length;
 
   const plantPestsMap = new Map(
-    (Array.isArray(plant.pests) ? plant.pests : [])
+    (Array.isArray(plant?.pests) ? plant.pests : [])
       .map((item) => (typeof item === 'string' ? null : item))
       .filter(Boolean)
       .map((item) => [(item as Pest).id, item as Pest] as const),
   );
 
   const plantCareTypesMap = new Map(
-    (Array.isArray(plant.careTypes) ? plant.careTypes : [])
+    (Array.isArray(plant?.careTypes) ? plant.careTypes : [])
       .map((item) => (typeof item === 'string' ? null : item))
       .filter(Boolean)
       .map((item) => [(item as CareType).id, item as CareType] as const),
@@ -226,6 +222,7 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
   };
 
   useEffect(() => {
+    if (!plant) return;
     if (!isPestsVisible) return;
 
     // Always try to keep the catalog warm.
@@ -275,7 +272,11 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
         return Array.from(known.values());
       });
     })();
-  }, [isPestsVisible, pestIds, pestsCatalog, plant.pests]);
+  }, [isPestsVisible, pestIds, pestsCatalog, plant?.pests, plant]);
+
+  if (!plant) {
+    return null;
+  }
 
   const getPestInfo = (pestId: string): PestInfo => {
     const fromPlant = plantPestsMap.get(pestId);

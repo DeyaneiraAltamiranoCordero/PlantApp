@@ -1,6 +1,14 @@
-import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  signInWithCredential,
+  signOut as firebaseSignOut,
+  type FirebaseAuthTypes,
+} from '@react-native-firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import {
   ApiError,
   createUserProfile,
@@ -24,6 +32,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<FirebaseAuthTypes.User | null>(null);
   const [loading, setLoading] = useState(true);
+  const isWeb = Platform.OS === 'web';
 
   const syncUserToApi = async (user: FirebaseAuthTypes.User) => {
     const displayName = user.displayName ?? '';
@@ -54,7 +63,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    const unsubscribe = auth().onAuthStateChanged(async (user) => {
+    if (isWeb) {
+      // React Native Firebase auth is native-first; on web it can throw if no default app is initialized.
+      setLoading(false);
+      return;
+    }
+
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       try {
         if (user) {
           // Don't block initial render on API sync (backend may be offline/unreachable).
@@ -70,18 +86,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
     return () => unsubscribe();
-  }, []);
+  }, [isWeb]);
 
   const signInWithGoogle = async () => {
+  if (isWeb) {
+    throw new Error('Google Sign-In con React Native Firebase no esta habilitado en Web. Usa Android/iOS o integra Firebase Web SDK para web.');
+  }
+
   try {
+    const auth = getAuth();
     await GoogleSignin.hasPlayServices();
     const signInResult = await GoogleSignin.signIn();
     console.log('SignIn result:', JSON.stringify(signInResult));
     const idToken = signInResult.data?.idToken;
     console.log('idToken:', idToken ? 'obtenido' : 'NULL');
     if (!idToken) throw new Error('No se obtuvo el token de Google');
-    const googleCredential = auth.GoogleAuthProvider.credential(idToken);
-    const result = await auth().signInWithCredential(googleCredential);
+    const googleCredential = GoogleAuthProvider.credential(idToken);
+    const result = await signInWithCredential(auth, googleCredential);
     console.log('Firebase user:', result.user.uid);
   } catch (error) {
     console.error('Error en Google Sign-In:', error);
@@ -90,9 +111,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 };
 
   const signOut = async () => {
+    if (isWeb) {
+      setCurrentUser(null);
+      return;
+    }
+
     try {
+      const auth = getAuth();
       await GoogleSignin.signOut();
-      await auth().signOut();
+      await firebaseSignOut(auth);
       setCurrentUser(null);
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
