@@ -2,10 +2,14 @@ import React from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
 import { CameraScanner } from '../../components/camera/CameraScanner';
 
-export default function ScannerScreen() {
+export default function ScannerScreen({ navigation }: any) {
     const handleScan = (data: any) => {
         // En el futuro, aquí conectaremos la lógica de la Inteligencia Artificial
-        console.log("Datos de la cámara recibidos para IA:", data);
+        console.log("Foto capturada", {
+            uri: data?.uri,
+            width: data?.width,
+            height: data?.height,
+        });
         Alert.alert(
             "Análisis IA (Próximamente)",
             "Has capturado la planta. La integración con la Inteligencia Artificial estará disponible muy pronto."
@@ -14,7 +18,10 @@ export default function ScannerScreen() {
 
     return (
         <View style={styles.container}>
-            <CameraScanner onScan={handleScan} />
+            <CameraScanner
+                onScan={handleScan}
+                onClose={() => navigation.navigate('Home')}
+            />
         </View>
     );
 }

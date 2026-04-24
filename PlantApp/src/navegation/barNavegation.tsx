@@ -16,22 +16,24 @@ export default function TabNavigator() {
 
     return (
         <Tab.Navigator
-            screenOptions={{
+            screenOptions={({ route }) => ({
                 headerShown: false,
                 tabBarShowLabel: false,
                 tabBarActiveTintColor: theme.colors.tertiary,
                 tabBarInactiveTintColor: theme.colors.mutedForeground,
-                tabBarStyle: {
-                    backgroundColor: theme.colors.card,
-                    position: 'absolute',
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    borderTopWidth: 0,
-                    elevation: 8,
-                    zIndex: 100,
-                },
-            }}
+                tabBarStyle: route.name === 'Scanner'
+                    ? { display: 'none' }
+                    : {
+                        backgroundColor: theme.colors.card,
+                        position: 'absolute',
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        borderTopWidth: 0,
+                        elevation: 8,
+                        zIndex: 100,
+                    },
+            })}
         >
             <Tab.Screen
                 name="Home"
