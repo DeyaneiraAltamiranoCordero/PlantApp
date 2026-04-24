@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Image, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { ApiError, ApiValidationError, CareType, Category, getCareTypes, getCategories, getPestDocument, getPests, Pest, Plant, updatePlant } from '../../context/services/api';
 import { PlantDetailForm, PlantDetailFormValues } from './PlantDetailForm';
@@ -278,8 +278,6 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
     return null;
   }
 
-  const plantImageUrl = plant.imageUrl || plant.image || plant.photo || null;
-
   const getPestInfo = (pestId: string): PestInfo => {
     const fromPlant = plantPestsMap.get(pestId);
     if (fromPlant) {
@@ -473,29 +471,8 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
         <View style={{ paddingHorizontal: theme.spacing.xl, paddingTop: theme.spacing.xl }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md, marginBottom: theme.spacing.md }}>
-          <TouchableOpacity
-            onPress={onClose}
-            activeOpacity={0.8}
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 18,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: theme.colors.card,
-              borderWidth: 1,
-              borderColor: theme.colors.border,
-              marginBottom: theme.spacing.md,
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Volver atrás"
-          >
-            <Feather name="arrow-left" size={20} color={theme.colors.foreground} />
-          </TouchableOpacity>
           <Text
             style={{
-              flex: 1,
               fontSize: theme.typography.size.xxl,
               fontWeight: theme.typography.weight.bold,
               color: theme.colors.foreground,
@@ -503,41 +480,9 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
           >
             {plant.name}
           </Text>
-        </View>
-
-          {plantImageUrl ? (
-            <Image
-              source={{ uri: plantImageUrl }}
-              style={{
-                width: '100%',
-                height: 220,
-                borderRadius: theme.radius.xl,
-                marginBottom: theme.spacing.xl,
-                backgroundColor: theme.colors.muted,
-              }}
-              resizeMode="cover"
-            />
-          ) : (
-            <View
-              style={{
-                width: '100%',
-                height: 220,
-                borderRadius: theme.radius.xl,
-                marginBottom: theme.spacing.xl,
-                backgroundColor: theme.colors.card,
-                borderWidth: 1,
-                borderColor: theme.colors.border,
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: theme.spacing.sm,
-              }}
-            >
-              <Feather name="image" size={28} color={theme.colors.mutedForeground} />
-              <Text style={{ color: theme.colors.mutedForeground }}>
-                Esta planta no tiene imagen disponible
-              </Text>
-            </View>
-          )}
+          <Text style={{ color: theme.colors.mutedForeground, marginBottom: theme.spacing.xl }}>
+            {plant.categoryName || plant.category?.name || 'Sin categoría'}
+          </Text>
 
           <PlantDetailForm
             plant={plant}

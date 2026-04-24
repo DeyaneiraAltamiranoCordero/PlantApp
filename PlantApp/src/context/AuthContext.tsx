@@ -7,7 +7,7 @@ import {
   type FirebaseAuthTypes,
 } from '@react-native-firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import {
   ApiError,
@@ -23,7 +23,6 @@ GoogleSignin.configure({
 interface AuthContextType {
   currentUser: FirebaseAuthTypes.User | null;
   loading: boolean;
-  signInLoading: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -33,8 +32,6 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<FirebaseAuthTypes.User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [signInLoading, setSignInLoading] = useState(false);
-  const signInInProgressRef = useRef(false);
   const isWeb = Platform.OS === 'web';
 
   const syncUserToApi = async (user: FirebaseAuthTypes.User) => {
@@ -92,36 +89,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [isWeb]);
 
   const signInWithGoogle = async () => {
-    if (isWeb) {
-      throw new Error('Google Sign-In con React Native Firebase no esta habilitado en Web. Usa Android/iOS o integra Firebase Web SDK para web.');
-    }
+  if (isWeb) {
+    throw new Error('Google Sign-In con React Native Firebase no esta habilitado en Web. Usa Android/iOS o integra Firebase Web SDK para web.');
+  }
 
-    if (signInInProgressRef.current) {
-      return;
-    }
-
-    signInInProgressRef.current = true;
-    setSignInLoading(true);
-
-    try {
-      const auth = getAuth();
-      await GoogleSignin.hasPlayServices();
-      const signInResult = await GoogleSignin.signIn();
-      console.log('SignIn result:', JSON.stringify(signInResult));
-      const idToken = signInResult.data?.idToken;
-      console.log('idToken:', idToken ? 'obtenido' : 'NULL');
-      if (!idToken) throw new Error('No se obtuvo el token de Google');
-      const googleCredential = GoogleAuthProvider.credential(idToken);
-      const result = await signInWithCredential(auth, googleCredential);
-      console.log('Firebase user:', result.user.uid);
-    } catch (error) {
-      console.error('Error en Google Sign-In:', error);
-      throw error;
-    } finally {
-      signInInProgressRef.current = false;
-      setSignInLoading(false);
-    }
-  };
+  try {
+    const auth = getAuth();
+    await GoogleSignin.hasPlayServices();
+    const signInResult = await GoogleSignin.signIn();
+    console.log('SignIn result:', JSON.stringify(signInResult));
+    const idToken = signInResult.data?.idToken;
+    console.log('idToken:', idToken ? 'obtenido' : 'NULL');
+    if (!idToken) throw new Error('No se obtuvo el token de Google');
+    const googleCredential = GoogleAuthProvider.credential(idToken);
+    const result = await signInWithCredential(auth, googleCredential);
+    console.log('Firebase user:', result.user.uid);
+  } catch (error) {
+    console.error('Error en Google Sign-In:', error);
+    throw error;
+  }
+};
 
   const signOut = async () => {
     if (isWeb) {
@@ -140,7 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, loading, signInLoading, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ currentUser, loading, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );
