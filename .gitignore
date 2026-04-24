@@ -1,32 +1,76 @@
-# Gradle files
-.gradle/
-build/
-
-# Local configuration file (sdk path, etc)
-local.properties
-
-# Log/OS Files
+# -----------------------------
+# Global / OS
+# -----------------------------
+.DS_Store
 *.log
 
-# Android Studio generated files and folders
+# -----------------------------
+# Git / editor
+# -----------------------------
+.idea/
+*.iml
+
+# -----------------------------
+# Backend (Python)
+# -----------------------------
+__pycache__/
+*.py[codz]
+*$py.class
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.env
+.env.*
+!*.env.example
+
+# Backend secrets
+Backend/serviceAccountKey.json
+Backend/client_secret_*.json
+
+# -----------------------------
+# Frontend (Expo / React Native)
+# -----------------------------
+node_modules/
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+.metro-health-check*
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.tsbuildinfo
+*.orig.*
+
+# Generated native folders inside Expo app
+PlantApp/ios/
+PlantApp/android/
+
+# -----------------------------
+# Android / Gradle (root and nested)
+# -----------------------------
+.gradle/
+build/
 captures/
 .externalNativeBuild/
 .cxx/
+output-metadata.json
 *.aab
 *.apk
-output-metadata.json
+*.hprof
+local.properties
 
-# IntelliJ
-*.iml
-.idea/
-misc.xml
-deploymentTargetDropDown.xml
-render.experimental.xml
-
-# Keystore files
+# Keystores and signing files
 *.jks
 *.keystore
-
-
-# Android Profiling
-*.hprof
+*.p8
+*.p12
+*.key
+*.mobileprovision
