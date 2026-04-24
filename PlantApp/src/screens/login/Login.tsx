@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLoginTheme } from './Login.styles';
 
 export default function LoginScreen() {
-  const { signInWithGoogle, loading } = useAuth();
+  const { signInWithGoogle, loading, signInLoading } = useAuth();
   const { styles, theme } = useLoginTheme();
 
   const handleGoogleSignIn = async () => {
@@ -32,8 +32,8 @@ export default function LoginScreen() {
           onPress={handleGoogleSignIn}
           variant="primary"
           size="lg"
-          loading={loading}
-          disabled={loading}
+          loading={loading || signInLoading}
+          disabled={loading || signInLoading}
           leftIcon={
             <FontAwesome
               name="google"

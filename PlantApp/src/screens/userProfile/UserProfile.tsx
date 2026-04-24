@@ -5,6 +5,7 @@ import { PersonalInfoForm } from "../../components/screenUserProfile/PersonalInf
 import { ProfileHeader } from "../../components/screenUserProfile/ProfileHeader";
 import { SettingsPanel } from "../../components/screenUserProfile/SettingsPanel";
 import { StatsBar } from "../../components/screenUserProfile/StatsBar";
+import { MyPlantsSection } from "../../components/screenHome/MyPlantsSection";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../theme/desingSystem";
 import { useProfileTheme } from "./UserProfile.styles";
@@ -26,6 +27,8 @@ export default function UserProfile() {
         plantsCount,
         streakCount,
         friendsCount,
+        favoritePlants,
+        plantCategories,
         isPrivate,
         setIsPrivate,
         isLoadingProfile,
@@ -94,6 +97,10 @@ export default function UserProfile() {
 
             <PersonalInfoForm
                 control={control}
+            />
+            <MyPlantsSection
+                favoritePlants={favoritePlants}
+                plantCategories={plantCategories}
             />
             <SettingsPanel
                 isPrivate={isPrivate}

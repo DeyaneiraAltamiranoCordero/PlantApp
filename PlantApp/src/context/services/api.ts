@@ -339,6 +339,25 @@ let careTypesCache: CareType[] | null = null;
 let pestsCache: Pest[] | null = null;
 let categoriesCache: Category[] | null = null;
 
+const apiMutationListeners = new Set<() => void>();
+
+export function subscribeToApiMutations(listener: () => void): () => void {
+  apiMutationListeners.add(listener);
+  return () => {
+    apiMutationListeners.delete(listener);
+  };
+}
+
+function notifyApiMutation(): void {
+  apiMutationListeners.forEach((listener) => {
+    try {
+      listener();
+    } catch (error) {
+      console.error('Error notificando mutacion de API:', error);
+    }
+  });
+}
+
 export type Friend = {
   id: string;
   userIdA: string;
@@ -422,6 +441,7 @@ async function apiRequest<T>(
   const schema: z.ZodType<T> | undefined = isZodSchema(optionsOrSchema)
     ? (optionsOrSchema as z.ZodType<T>)
     : maybeSchema;
+  const shouldNotifyMutation = (options.method ?? 'GET') !== 'GET';
 
   const token = await getAuthToken();
   let response: Response;
@@ -453,12 +473,16 @@ async function apiRequest<T>(
   }
 
   const body = (await response.json()) as unknown;
-  if (!schema) return body as T;
+  if (!schema) {
+    if (shouldNotifyMutation) notifyApiMutation();
+    return body as T;
+  }
 
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
     throw new ApiValidationError('Respuesta inválida de la API.', parsed.error.issues, body);
   }
+  if (shouldNotifyMutation) notifyApiMutation();
   return parsed.data;
 }
 

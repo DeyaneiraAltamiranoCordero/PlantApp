@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { useForm, useWatch } from 'react-hook-form';
 
-import { ApiError, getUserProfile, updateUserProfile } from '../../context/services/api';
+import { ApiError, getUserProfile, subscribeToApiMutations, updateUserProfile } from '../../context/services/api';
 import { ISODateStringSchema } from '../../context/services/schemas';
 import { useToast } from '../../context/ToastContext';
 import type { PersonalInfoFormValues } from '../../components/screenUserProfile/PersonalInfoForm';
@@ -41,9 +41,19 @@ export function useUserProfileController({ currentUser }: Params) {
   const [plantsCount, setPlantsCount] = useState(0);
   const [streakCount, setStreakCount] = useState(0);
   const [friendsCount, setFriendsCount] = useState(0);
+  const [favoritePlants, setFavoritePlants] = useState<string[]>([]);
+  const [plantCategories, setPlantCategories] = useState<string[]>([]);
   const [isPrivate, setIsPrivate] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const isMountedRef = useRef(true);
+
+  const uniqueStrings = (items: Array<string | undefined | null>) => {
+    const normalized = items
+      .map((item) => item?.trim())
+      .filter((item): item is string => Boolean(item));
+    return Array.from(new Set(normalized));
+  };
 
   const applyFallbackProfileFromCurrentUser = () => {
     if (!currentUser) return;
@@ -72,70 +82,101 @@ export function useUserProfileController({ currentUser }: Params) {
     setIsPrivate(false);
   };
 
-  useEffect(() => {
+  const loadProfile = useCallback(async () => {
     if (!currentUser) return;
 
-    let isMounted = true;
+    setIsLoadingProfile(true);
+    try {
+      const profile = await getUserProfile(currentUser.uid);
+      if (!isMountedRef.current) return;
 
-    const loadProfile = async () => {
-      setIsLoadingProfile(true);
-      try {
-        const profile = await getUserProfile(currentUser.uid);
-        if (!isMounted) return;
-
-        if (__DEV__) {
-          console.log('UserProfile: loaded profile.user', profile.user);
-          console.log('UserProfile: loaded description fields', {
-            description: profile.user.description,
-            bibliography: profile.user.bibliography,
-          });
-        }
-
-        const stats = profile.stats ?? {
-          plantsCount: 0,
-          favoritePlantsCount: 0,
-          friendsCount: 0,
-        };
-
-        reset({
-          name: profile.user.name || '',
-          lastName: profile.user.lastName || '',
-          secondLastName: profile.user.secondLastName || '',
-          nickname: profile.user.nickname || profile.user.code || '',
-          email: profile.user.email || currentUser.email || '',
-          description: profile.user.description || '',
-          birthday: profile.user.birthDate || '',
+      if (__DEV__) {
+        console.log('UserProfile: loaded profile.user', profile.user);
+        console.log('UserProfile: loaded description fields', {
+          description: profile.user.description,
+          bibliography: profile.user.bibliography,
         });
-
-        setProfileImage(profile.user.profilePicture || '');
-
-        const plantsLength = Array.isArray(profile.plants) ? profile.plants.length : undefined;
-        setPlantsCount(plantsLength ?? stats.plantsCount ?? 0);
-        setStreakCount(profile.user.streak ?? profile.user.streakDays ?? 0);
-
-        const friendsLength = Array.isArray(profile.friends) ? profile.friends.length : undefined;
-        setFriendsCount(friendsLength ?? stats.friendsCount ?? 0);
-        setIsPrivate(profile.user.isPrivate ?? profile.user.publicProfile === false);
-      } catch (error) {
-        if (error instanceof ApiError && error.status === 404) {
-          if (!isMounted) return;
-          applyFallbackProfileFromCurrentUser();
-          return;
-        }
-        console.error('Error al cargar el perfil:', error);
-        Alert.alert('Error', 'No se pudo cargar tu perfil.');
-      } finally {
-        if (isMounted) {
-          setIsLoadingProfile(false);
-        }
       }
-    };
 
-    loadProfile();
-    return () => {
-      isMounted = false;
-    };
+      const stats = profile.stats ?? {
+        plantsCount: 0,
+        favoritePlantsCount: 0,
+        friendsCount: 0,
+      };
+
+      const favoriteNamesFromEndpoint = uniqueStrings(
+        profile.favoritePlants?.map((plant) => plant.name) ?? [],
+      );
+      const favoriteNamesFromPlants = uniqueStrings(
+        (profile.plants ?? []).filter((plant) => Boolean(plant.isFavorite)).map((plant) => plant.name),
+      );
+      setFavoritePlants(
+        favoriteNamesFromEndpoint.length > 0
+          ? favoriteNamesFromEndpoint
+          : favoriteNamesFromPlants,
+      );
+
+      const categoryNamesFromProfile = uniqueStrings(profile.categories?.map((category) => category.name) ?? []);
+      const categoryNamesFromPlants = uniqueStrings(profile.plants?.map((plant) => plant.categoryName) ?? []);
+      setPlantCategories(
+        categoryNamesFromProfile.length > 0 ? categoryNamesFromProfile : categoryNamesFromPlants,
+      );
+
+      reset({
+        name: profile.user.name || '',
+        lastName: profile.user.lastName || '',
+        secondLastName: profile.user.secondLastName || '',
+        nickname: profile.user.nickname || profile.user.code || '',
+        email: profile.user.email || currentUser.email || '',
+        description: profile.user.description || '',
+        birthday: profile.user.birthDate || '',
+      });
+
+      setProfileImage(profile.user.profilePicture || '');
+
+      const plantsLength = Array.isArray(profile.plants) ? profile.plants.length : undefined;
+      setPlantsCount(plantsLength ?? stats.plantsCount ?? 0);
+      setStreakCount(profile.user.streak ?? profile.user.streakDays ?? 0);
+
+      const friendsLength = Array.isArray(profile.friends) ? profile.friends.length : undefined;
+      setFriendsCount(friendsLength ?? stats.friendsCount ?? 0);
+      setIsPrivate(profile.user.isPrivate ?? profile.user.publicProfile === false);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        if (!isMountedRef.current) return;
+        applyFallbackProfileFromCurrentUser();
+        setFavoritePlants([]);
+        setPlantCategories([]);
+        return;
+      }
+      console.error('Error al cargar el perfil:', error);
+      Alert.alert('Error', 'No se pudo cargar tu perfil.');
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoadingProfile(false);
+      }
+    }
   }, [currentUser, reset]);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    void loadProfile();
+
+    if (!currentUser) {
+      return () => {
+        isMountedRef.current = false;
+      };
+    }
+
+    const unsubscribe = subscribeToApiMutations(() => {
+      void loadProfile();
+    });
+
+    return () => {
+      isMountedRef.current = false;
+      unsubscribe();
+    };
+  }, [currentUser, loadProfile]);
 
   const onSubmit = async (values: PersonalInfoFormValues) => {
     if (!currentUser) return;
@@ -198,6 +239,8 @@ export function useUserProfileController({ currentUser }: Params) {
     plantsCount,
     streakCount,
     friendsCount,
+    favoritePlants,
+    plantCategories,
     isPrivate,
     setIsPrivate,
     isLoadingProfile,
