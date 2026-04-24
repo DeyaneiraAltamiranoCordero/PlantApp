@@ -26,8 +26,11 @@ ENV/
 .coverage
 .coverage.*
 htmlcov/
+.env
 .env.*
 !*.env.example
+Backend/.git_backup_*/
+Backend/.vscode/
 
 # Backend secrets
 Backend/serviceAccountKey.json

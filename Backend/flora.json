@@ -1,0 +1,251 @@
+{
+  "collections": {
+    "users": [
+      {
+        "id": "usr-1",
+        "code": "12345",
+        "name": "Deya",
+        "lastName": "Cordero",
+        "secondLastName": "Rivera",
+        "nickname": "plantaLover",
+        "profilePicture": "https://example.com/profiles/deya.jpg",
+        "plantCount": 5,
+        "birthDate": "1990-05-15",
+        "registrationDate": "2025-01-01T10:00:00.000Z",
+        "email": "deya.cordero@example.com",
+        "streak": 1,
+        "achievements": ["ach-1", "ach-2"]
+      },
+      {
+        "id": "usr-2",
+        "code": "67890",
+        "name": "Carlos",
+        "lastName": "Méndez",
+        "secondLastName": "Solís",
+        "nickname": "cactusKing",
+        "profilePicture": "https://example.com/profiles/carlos.jpg",
+        "plantCount": 12,
+        "birthDate": "1985-08-22",
+        "registrationDate": "2025-02-14T09:30:00.000Z",
+        "email": "carlos.mendez@example.com",
+        "streak": 15,
+        "achievements": ["ach-1", "ach-3"]
+      },
+      {
+        "id": "usr-3",
+        "code": "11223",
+        "name": "Sofía",
+        "lastName": "Ramírez",
+        "secondLastName": "Torres",
+        "nickname": "greenThumb",
+        "profilePicture": "https://example.com/profiles/sofia.jpg",
+        "plantCount": 8,
+        "birthDate": "1993-11-03",
+        "registrationDate": "2025-03-05T14:00:00.000Z",
+        "email": "sofia.ramirez@example.com",
+        "streak": 7,
+        "achievements": ["ach-2", "ach-3"]
+      }
+    ],
+    "friends": [
+      {
+        "id": "frn-1",
+        "userIdA": "usr-1",
+        "userIdB": "usr-2",
+        "createdAt": "2025-02-01T10:00:00.000Z"
+      },
+      {
+        "id": "frn-2",
+        "userIdA": "usr-1",
+        "userIdB": "usr-3",
+        "createdAt": "2025-03-10T10:00:00.000Z"
+      },
+      {
+        "id": "frn-3",
+        "userIdA": "usr-2",
+        "userIdB": "usr-3",
+        "createdAt": "2025-03-15T10:00:00.000Z"
+      }
+    ],
+    "plants": [
+      {
+        "id": "plt-1",
+        "userId": "usr-1",
+        "name": "Lavanda",
+        "categoryId": "cat-1",
+        "age": "2 años",
+        "price": 15.00,
+        "growthTime": "6 meses",
+        "height": "30 cm",
+        "isFavorite": true,
+        "toxic": true,
+        "toxicTo": "mascotas",
+        "flowering": "primavera",
+        "status": "saludable",
+        "lightPreference": "luz indirecta",
+        "originLocality": "Mediterráneo",
+        "temperature": "15-25°C",
+        "careTypes": ["car-1", "car-2"],
+        "lastWatered": "2026-03-01T08:00:00.000Z",
+        "fertilizerType": "Fertilizante líquido",
+        "lastFertilized": "2026-02-15T08:00:00.000Z",
+        "pests": ["pst-1", "pst-2"]
+      },
+      {
+        "id": "plt-2",
+        "userId": "usr-2",
+        "name": "Cactus barril dorado",
+        "categoryId": "cat-2",
+        "age": "5 años",
+        "price": 22.50,
+        "growthTime": "2 años",
+        "height": "45 cm",
+        "isFavorite": true,
+        "toxic": false,
+        "toxicTo": null,
+        "flowering": "verano",
+        "status": "saludable",
+        "lightPreference": "luz directa",
+        "originLocality": "México",
+        "temperature": "20-35°C",
+        "careTypes": ["car-2", "car-3"],
+        "lastWatered": "2026-03-10T07:00:00.000Z",
+        "fertilizerType": "Gránulos de liberación lenta",
+        "lastFertilized": "2026-01-20T08:00:00.000Z",
+        "pests": ["pst-3"]
+      },
+      {
+        "id": "plt-3",
+        "userId": "usr-3",
+        "name": "Monstera Deliciosa",
+        "categoryId": "cat-1",
+        "age": "1 año",
+        "price": 35.00,
+        "growthTime": "1 año",
+        "height": "60 cm",
+        "isFavorite": false,
+        "toxic": true,
+        "toxicTo": "gatos y perros",
+        "flowering": "raramente en interiores",
+        "status": "necesita atención",
+        "lightPreference": "luz indirecta brillante",
+        "originLocality": "América Central",
+        "temperature": "18-27°C",
+        "careTypes": ["car-1", "car-3"],
+        "lastWatered": "2026-03-18T09:00:00.000Z",
+        "fertilizerType": "Fertilizante NPK balanceado",
+        "lastFertilized": "2026-03-01T08:00:00.000Z",
+        "pests": ["pst-2"]
+      },
+      {
+        "id": "plt-4",
+        "userId": "usr-1",
+        "name": "Romero",
+        "categoryId": "cat-3",
+        "age": "3 años",
+        "price": 10.00,
+        "growthTime": "8 meses",
+        "height": "50 cm",
+        "isFavorite": false,
+        "toxic": false,
+        "toxicTo": null,
+        "flowering": "primavera",
+        "status": "saludable",
+        "lightPreference": "sol directo",
+        "originLocality": "Mediterráneo",
+        "temperature": "10-30°C",
+        "careTypes": ["car-2"],
+        "lastWatered": "2026-03-20T08:00:00.000Z",
+        "fertilizerType": "Compost orgánico",
+        "lastFertilized": "2026-02-01T08:00:00.000Z",
+        "pests": []
+      }
+    ],
+    "pests": [
+      {
+        "id": "pst-1",
+        "name": "Pulgón",
+        "scientificName": "Aphidoidea",
+        "treatment": "Insecticidas naturales como jabón insecticida o aceite de neem",
+        "description": "Pequeños insectos que succionan la savia de las plantas, causando daño en hojas y tallos.",
+        "dangerLevel": "Alto"
+      },
+      {
+        "id": "pst-2",
+        "name": "Araña roja",
+        "scientificName": "Tetranychidae",
+        "treatment": "Aplicar agua a presión, aceite de neem o acaricida",
+        "description": "Ácaros que se alimentan de la savia de las plantas, causando manchas amarillas en las hojas y debilitándola progresivamente.",
+        "dangerLevel": "Medio"
+      },
+      {
+        "id": "pst-3",
+        "name": "Cochinilla algodonosa",
+        "scientificName": "Pseudococcidae",
+        "treatment": "Retirar con algodón empapado en alcohol, aplicar aceite de neem",
+        "description": "Insectos de cuerpo blando cubiertos de una capa cerosa blanca que se agrupan en tallos y axilas de hojas, drenando los nutrientes de la planta.",
+        "dangerLevel": "Alto"
+      }
+    ],
+    "categories": [
+      {
+        "id": "cat-1",
+        "name": "Plantas de interior",
+        "description": "Plantas que se adaptan bien a ambientes interiores con luz moderada o indirecta."
+      },
+      {
+        "id": "cat-2",
+        "name": "Suculentas y cactus",
+        "description": "Plantas resistentes a la sequía que almacenan agua en hojas o tallos, ideales para ambientes secos."
+      },
+      {
+        "id": "cat-3",
+        "name": "Hierbas aromáticas",
+        "description": "Hierbas culinarias y medicinales valoradas por su aroma y sabor, ideales para jardines de cocina."
+      }
+    ],
+    "careTypes": [
+      {
+        "id": "car-1",
+        "name": "Cuidado tropical",
+        "description": "Alta humedad, riego frecuente y luz indirecta brillante. Ideal para especies tropicales como Monstera y Lavanda."
+      },
+      {
+        "id": "car-2",
+        "name": "Cuidado resistente a la sequía",
+        "description": "Riego poco frecuente, sustrato con buen drenaje y alta exposición lumínica. Apto para suculentas, cactus y hierbas mediterráneas."
+      },
+      {
+        "id": "car-3",
+        "name": "Cuidado equilibrado",
+        "description": "Riego moderado cada 7-10 días, luz indirecta y fertilización mensual. Régimen general para la mayoría de plantas de interior."
+      }
+    ],
+    "achievements": [
+      {
+        "id": "ach-1",
+        "name": "Cuidado constante",
+        "description": "Cuidar una planta durante 30 días consecutivos sin omitir ningún riego.",
+        "obtainedWhen": "30 días de cuidado continuo sin interrupciones",
+        "emoji": "🪴",
+        "plantId": "plt-1"
+      },
+      {
+        "id": "ach-2",
+        "name": "Primera floración",
+        "description": "Lograr que una planta florezca por primera vez bajo tu cuidado.",
+        "obtainedWhen": "La planta registra su primer evento de floración",
+        "emoji": "🌸",
+        "plantId": "plt-1"
+      },
+      {
+        "id": "ach-3",
+        "name": "Combatiente de plagas",
+        "description": "Tratar y recuperar completamente una planta afectada por una plaga.",
+        "obtainedWhen": "El estado de la planta cambia de infestada a saludable tras un tratamiento",
+        "emoji": "🌼",
+        "plantId": "plt-2"
+      }
+    ]
+  }
+}
