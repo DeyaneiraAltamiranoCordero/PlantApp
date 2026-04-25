@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Platform, Alert } from 'react-native';
 import { CameraView } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/desingSystem';
 import { Button } from '../ui/Button';
@@ -80,6 +81,13 @@ export function CameraScanner({ onScan, onClose }: CameraScannerProps) {
             borderWidth: 1,
             borderColor: 'rgba(255,255,255,0.3)',
         },
+        galleryButton: {
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            padding: theme.spacing.md,
+            borderRadius: 50,
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.3)',
+        },
         captureButton: {
             width: 70,
             height: 70,
@@ -153,6 +161,38 @@ export function CameraScanner({ onScan, onClose }: CameraScannerProps) {
         }
     };
 
+    const pickImage = async () => {
+        // 1. Pedir permiso explícitamente
+        const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        
+        if (permissionResult.granted === false) {
+            Alert.alert(
+                "Permiso requerido",
+                "Necesitamos acceso a tu galería para que puedas elegir fotos de tus plantas.",
+                [{ text: "OK" }]
+            );
+            return;
+        }
+
+        // 2. Abrir la galería
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [4, 3],
+            quality: 0.7,
+            base64: true,
+        });
+
+        if (!result.canceled && result.assets && result.assets[0].base64) {
+            if (onScan) {
+                onScan({
+                    uri: result.assets[0].uri,
+                    base64: result.assets[0].base64
+                });
+            }
+        }
+    };
+
     const flashIcon = flashMode === 'off' ? 'flash-off' : flashMode === 'on' ? 'flash' : 'flash-auto';
 
     return (
@@ -186,8 +226,9 @@ export function CameraScanner({ onScan, onClose }: CameraScannerProps) {
                 </View>
 
                 <View style={styles.controls}>
-                    {/* Espaciador para mantener simetría */}
-                    <View style={{ width: 44, height: 44, marginHorizontal: theme.spacing.md }} />
+                    <TouchableOpacity style={styles.galleryButton} onPress={pickImage}>
+                        <MaterialCommunityIcons name="image-multiple-outline" size={28} color="white" />
+                    </TouchableOpacity>
 
                     {/* Botón central para capturar foto real */}
                     <TouchableOpacity style={styles.captureButton} onPress={handleCapture}>

@@ -2,21 +2,43 @@ import React, { useState } from 'react';
 import { View, StyleSheet, Alert, ActivityIndicator, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { CameraScanner } from '../../components/camera/CameraScanner';
 import { identifyPlant, IdentifyResult } from '../../context/services/api';
+import { loadModel, detectObjects } from '../../context/services/objectDetectionService';
 import { useTheme } from '../../theme/desingSystem';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function ScannerScreen({ navigation }: any) {
     const { theme } = useTheme();
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [analysisMessage, setAnalysisMessage] = useState("Analizando planta...");
     const [result, setResult] = useState<IdentifyResult | null>(null);
+
+    // Pre-cargar el modelo local al entrar
+    React.useEffect(() => {
+        loadModel().catch(err => console.error("Error cargando TF.js:", err));
+    }, []);
 
     const handleScan = async (data: any) => {
         setIsAnalyzing(true);
         setResult(null);
+        setAnalysisMessage("Buscando planta en la imagen...");
+        
         try {
-            console.log("Enviando foto a la IA para análisis...");
-            // Usamos el base64 que ahora viene del componente CameraScanner
             const imageData = data.base64 || data.uri;
+
+            // 1. Detección Local con TensorFlow
+            console.log("Iniciando detección local...");
+            const localDetection = await detectObjects(imageData);
+
+            if (!localDetection.hasPlant) {
+                console.log("No se detectó planta localmente.");
+                setAnalysisMessage("No detecto una planta clara, pero intentaré identificarla...");
+                // Podríamos detenernos aquí, pero por ahora seguiremos para no ser tan estrictos
+            } else {
+                setAnalysisMessage("¡Planta detectada! Identificando especie...");
+            }
+
+            // 2. IA Principal
+            console.log("Enviando foto a la IA para análisis...");
             const analysis = await identifyPlant(imageData);
             console.log("Análisis completado con éxito:", analysis.name);
             setResult(analysis);
@@ -60,7 +82,7 @@ export default function ScannerScreen({ navigation }: any) {
             {isAnalyzing && (
                 <View style={styles.loadingOverlay}>
                     <ActivityIndicator size="large" color={theme.colors.primary} />
-                    <Text style={[styles.loadingText, { color: 'white' }]}>Analizando planta...</Text>
+                    <Text style={[styles.loadingText, { color: 'white' }]}>{analysisMessage}</Text>
                 </View>
             )}
 
