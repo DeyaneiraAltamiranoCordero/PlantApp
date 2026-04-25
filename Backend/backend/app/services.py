@@ -229,6 +229,24 @@ async def identify_plant_mock(images: list[str]) -> dict[str, Any]:
         }
 
     try:
+        if not images:
+            return {
+                "name": "Error: No hay imagen",
+                "scientific_name": "N/A",
+                "category": "Error",
+                "status": "error",
+                "description": "El servidor no recibió ninguna imagen para procesar.",
+                "age": "N/A",
+                "growthTime": "N/A",
+                "height": "N/A",
+                "lightPreference": "N/A",
+                "originLocality": "N/A",
+                "flowering": "N/A",
+                "temperature": "N/A",
+                "toxic": False,
+                "fertilizerType": "N/A",
+            }
+
         cleaned_images = []
         for img in images:
             if "," in img:
@@ -242,9 +260,8 @@ async def identify_plant_mock(images: list[str]) -> dict[str, Any]:
             "images": cleaned_images, 
             "similar_images": True,
         }
-        # Los detalles se pueden pedir como parámetros de consulta en v3 para mayor compatibilidad
+        # Parámetros mínimos para evitar errores 400
         params = {
-            "details": "common_names,description,taxonomy,sunlight,watering",
             "language": "es"
         }
 
@@ -324,7 +341,7 @@ async def identify_plant_mock(images: list[str]) -> dict[str, Any]:
             "scientific_name": "N/A",
             "category": "Error",
             "status": "error",
-            "description": f"Excepción: {str(e)[:100]}",
+            "description": f"Error interno: {str(e)}",
             "age": "N/A",
             "growthTime": "N/A",
             "height": "N/A",

@@ -21,11 +21,13 @@ export default function ScannerScreen({ navigation }: any) {
             console.log("Planta identificada:", analysis.name);
             setResult(analysis);
         } catch (error: any) {
-            console.error("Error en el análisis:", error);
-            
+            console.error("Error completo en el análisis:", error);
             let errorMessage = "No pudimos conectar con la IA.";
             if (error.status) {
                 errorMessage = `Error del servidor (${error.status})`;
+            }
+            if (error.body && (error.body as any).description) {
+                errorMessage = (error.body as any).description;
             }
 
             Alert.alert("Error de Análisis", errorMessage);
