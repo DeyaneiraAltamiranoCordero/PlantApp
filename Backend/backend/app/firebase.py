@@ -27,6 +27,10 @@ def get_firestore_client() -> Any:
         credential = credentials.Certificate(
             str(settings.firebase_service_account_path)
         )
-        firebase_admin.initialize_app(credential)
+        try:
+            firebase_admin.initialize_app(credential)
+        except ValueError:
+            # Another thread might have initialized it just now.
+            pass
 
     return firestore.client()

@@ -202,3 +202,29 @@ def _generate_next_user_code(db) -> str:
             max_number = max(max_number, number)
 
     return f"usr-{max_number + 1}"
+
+
+def identify_plant_mock(image_data: str) -> dict[str, Any]:
+    """Simula el analisis de una planta con IA."""
+    import time
+
+    # Simulamos el tiempo de procesamiento de la IA
+    time.sleep(2)
+
+    # Devolvemos los datos mockeados del Romero
+    return {
+        "name": "Romero",
+        "category": "Planta de Exterior",
+        "age": "3 años",
+        "growthTime": "8 meses",
+        "height": "50 cm",
+        "toxic": False,
+        "toxicTo": None,
+        "flowering": "primavera",
+        "status": "saludable",
+        "lightPreference": "sol directo",
+        "originLocality": "Mediterráneo",
+        "temperature": "10-30°C",
+        "fertilizerType": "Compost orgánico",
+        "description": "Amor por las plantas y las flores. Ideal para condimentar tus comidas.",
+    }

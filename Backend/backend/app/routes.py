@@ -11,6 +11,7 @@ from .models import (
     PlantWithRelationsModel,
     UserModel,
     UserProfileResponse,
+    IdentifyResponse,
 )
 from .services import (
     ensure_user_document,
@@ -19,6 +20,7 @@ from .services import (
     get_collection,
     get_document,
     update_document,
+    identify_plant_mock,
 )
 
 CollectionName = Literal[
@@ -225,6 +227,16 @@ def list_care_types_slug() -> list[dict[str, Any]]:
     """Alias that serves care types when clients use kebab-case endpoints."""
 
     return get_collection("careTypes")
+
+
+@router.post("/api/identify", response_model=IdentifyResponse)
+def identify_plant_endpoint(payload: dict[str, Any] = Body(..., embed=False)) -> dict[str, Any]:
+    """Identifica una planta a partir de una imagen."""
+    image_data = payload.get("image", "")
+    if not image_data:
+        raise HTTPException(status_code=400, detail="Se requiere la imagen para el analisis.")
+    
+    return identify_plant_mock(image_data)
 
 
 @router.get("/api/{collection_name}", response_model=list[dict[str, Any]])

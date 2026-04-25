@@ -70,7 +70,7 @@ class CategoryModel(FirestoreDocument):
     """Describes the taxonomic or thematic category for a plant."""
 
     name: str
-    description: str
+    description: str | None = ""
 
 
 class CareTypeModel(FirestoreDocument):
@@ -85,10 +85,10 @@ class PestModel(FirestoreDocument):
 
     imageUrl: str | None = None
     name: str
-    scientificName: str
-    treatment: str
-    description: str
-    dangerLevel: str
+    scientificName: str | None = ""
+    treatment: str | None = ""
+    description: str | None = ""
+    dangerLevel: str | None = ""
 
 
 class PlantWithRelationsModel(PlantModel):
@@ -135,3 +135,22 @@ class ApiCollectionResponse(BaseModel):
     collection: str
     count: int
     items: list[dict[str, Any]]
+
+
+class IdentifyResponse(BaseModel):
+    """Result of AI plant identification analysis."""
+
+    name: str
+    category: str
+    age: str
+    growthTime: str
+    height: str
+    toxic: bool
+    toxicTo: str | None = None
+    flowering: str
+    status: str
+    lightPreference: str
+    originLocality: str
+    temperature: str
+    fertilizerType: str
+    description: str | None = None
