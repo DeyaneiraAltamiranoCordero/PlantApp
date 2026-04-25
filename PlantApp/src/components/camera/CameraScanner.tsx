@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity, Platform, Alert, ActivityIndi
 import { CameraView } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as MediaLibrary from 'expo-media-library';
 import { useTheme } from '../../theme/desingSystem';
 import { Button } from '../ui/Button';
 import { useCamera } from '../../hooks/useCamera';
@@ -150,23 +151,17 @@ export function CameraScanner({ onScan, onClose }: CameraScannerProps) {
     });
 
     React.useEffect(() => {
-        // Al entrar, verificamos permisos una vez para que el estado local del hook se actualice
+        // Intentamos actualizar el estado interno por si acaso, 
+        // pero no bloquearemos la pantalla si tarda.
         requestPermissions();
     }, []);
 
-    if (isLoadingPermissions || !permissions) {
-        return (
-            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-                <ActivityIndicator size="large" color={theme.colors.primary} />
-                <Text style={{ color: theme.colors.foreground, marginTop: 10 }}>Iniciando cámara...</Text>
-            </View>
-        );
-    }
-
-    if (!isPermissionGranted) {
+    // Si explícitamente se nos dice que NO hay permiso, mostramos el botón.
+    // Pero si está "cargando" o es "null", vamos a intentar mostrar la cámara igualmente.
+    if (permissions && !isPermissionGranted) {
         return (
             <View style={styles.permissionContainer}>
-                <Text style={styles.permissionText}>No tenemos permiso para usar la cámara</Text>
+                <Text style={styles.permissionText}>La cámara necesita permiso para funcionar</Text>
                 <Button title="Conceder Permiso" onPress={requestPermissions} />
             </View>
         );

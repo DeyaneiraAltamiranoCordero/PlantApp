@@ -132,6 +132,7 @@ export type Pest = {
 
 export type IdentifyResult = {
     name: string;
+    scientific_name?: string;
     category: string;
     age: string;
     growthTime: string;

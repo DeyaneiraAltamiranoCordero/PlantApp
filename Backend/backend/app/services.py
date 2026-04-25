@@ -270,6 +270,7 @@ def identify_plant_mock(image_data: str) -> dict[str, Any]:
         
         return {
             "name": common_name.capitalize(),
+            "scientific_name": best.get("name", "Desconocido"),
             "category": classification.get("taxonomy", {}).get("class", "Planta"),
             "age": "Recién identificada",
             "growthTime": "Variable",
