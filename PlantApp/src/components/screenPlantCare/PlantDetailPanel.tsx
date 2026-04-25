@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Modal, ScrollView, Text, TouchableOpacity, View, Image, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { ApiError, ApiValidationError, CareType, Category, getCareTypes, getCategories, getPestDocument, getPests, Pest, Plant, updatePlant } from '../../context/services/api';
 import { PlantDetailForm, PlantDetailFormValues } from './PlantDetailForm';
@@ -479,18 +479,61 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
       <ToastViewport />
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
         <View style={{ paddingHorizontal: theme.spacing.xl, paddingTop: theme.spacing.xl }}>
-          <Text
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.xl }}>
+            <TouchableOpacity
+              onPress={onClose}
+              style={{
+                marginRight: theme.spacing.md,
+                padding: theme.spacing.xs,
+              }}
+              accessibilityLabel="Volver"
+              accessibilityRole="button"
+            >
+              <Feather name="chevron-left" size={28} color={theme.colors.foreground} />
+            </TouchableOpacity>
+            <Text
+              style={{
+                fontSize: theme.typography.size.xxl,
+                fontWeight: theme.typography.weight.bold,
+                color: theme.colors.foreground,
+                flex: 1,
+              }}
+              numberOfLines={1}
+            >
+              {plant.name}
+            </Text>
+          </View>
+
+          {/* Sección de Imagen */}
+          <View
             style={{
-              fontSize: theme.typography.size.xxl,
-              fontWeight: theme.typography.weight.bold,
-              color: theme.colors.foreground,
+              width: '100%',
+              height: 250,
+              backgroundColor: theme.colors.muted,
+              borderRadius: theme.radius.xl,
+              marginBottom: theme.spacing.xl,
+              justifyContent: 'center',
+              alignItems: 'center',
+              overflow: 'hidden',
+              borderWidth: 1,
+              borderColor: theme.colors.border,
             }}
           >
-            {plant.name}
-          </Text>
-          <Text style={{ color: theme.colors.mutedForeground, marginBottom: theme.spacing.xl }}>
-            {plant.categoryName || plant.category?.name || 'Sin categoría'}
-          </Text>
+            {plant.image ? (
+              <Image
+                source={{ uri: plant.image }}
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={{ alignItems: 'center' }}>
+                <Feather name="image" size={48} color={theme.colors.mutedForeground} style={{ marginBottom: theme.spacing.sm }} />
+                <Text style={{ color: theme.colors.mutedForeground, fontFamily: theme.typography.fontFamily.default }}>
+                  No cuenta con una imagen
+                </Text>
+              </View>
+            )}
+          </View>
 
           <PlantDetailForm
             plant={plant}

@@ -1,10 +1,9 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, Text, TextInput, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
-import { MyPlantsSection } from '../../components/screenHome/MyPlantsSection';
 import { useAuth } from '../../context/AuthContext';
-import { ApiError, getUserPlants, getUserProfile } from '../../context/services/api';
+import { getUserProfile } from '../../context/services/api';
 import { useTheme } from '../../theme/desingSystem';
 import { createHomeStyles } from './Home.styles';
 
@@ -13,9 +12,6 @@ export default function HomeScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => createHomeStyles(theme), [theme]);
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [favoritePlants, setFavoritePlants] = useState<string[]>([]);
-  const [plantCategories, setPlantCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const uniqueStrings = (items: Array<string | undefined | null>) => {
@@ -37,37 +33,11 @@ export default function HomeScreen() {
     if (showLoading) setIsLoading(true);
 
     try {
-      const [profile, plants] = await Promise.all([
-        getUserProfile(currentUser.uid),
-        getUserPlants(currentUser.uid),
-      ]);
-
-      const favoriteNamesFromEndpoint = uniqueStrings(
-        profile.favoritePlants?.map((p) => p.name) ?? [],
-      );
-      const favoriteNamesFromPlants = uniqueStrings(
-        (plants ?? []).filter((p) => Boolean(p.isFavorite)).map((p) => p.name),
-      );
-
-      setFavoritePlants(
-        favoriteNamesFromEndpoint.length > 0
-          ? favoriteNamesFromEndpoint
-          : favoriteNamesFromPlants,
-      );
-
-      const categoryNamesFromProfile = uniqueStrings(profile.categories?.map((c) => c.name) ?? []);
-      const categoryNamesFromPlants = uniqueStrings(profile.plants?.map((p) => p.categoryName) ?? []);
-      setPlantCategories(
-        categoryNamesFromProfile.length > 0 ? categoryNamesFromProfile : categoryNamesFromPlants,
-      );
+      // Home now only needs minimal info if any, but we'll keep the call
+      // or remove it if not needed. Since we removed the states, we can remove the logic.
+      await getUserProfile(currentUser.uid);
     } catch (error) {
-      if (error instanceof ApiError && error.status === 404) {
-        setFavoritePlants([]);
-        setPlantCategories([]);
-        return;
-      }
       console.error('Error al cargar resumen:', error);
-      Alert.alert('Error', 'No se pudo cargar el resumen.');
     } finally {
       setIsLoading(false);
     }
@@ -75,8 +45,8 @@ export default function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadSummary(favoritePlants.length === 0 && plantCategories.length === 0);
-    }, [loadSummary, favoritePlants.length, plantCategories.length])
+      loadSummary(true);
+    }, [loadSummary])
   );
 
   return (
@@ -109,8 +79,6 @@ export default function HomeScreen() {
           <TextInput
             placeholder="Buscar"
             placeholderTextColor={theme.colors.mutedForeground}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
             style={styles.searchInput}
             returnKeyType="search"
           />
@@ -123,7 +91,11 @@ export default function HomeScreen() {
             <ActivityIndicator size="large" color={theme.colors.primary} />
           </View>
         ) : (
-          <MyPlantsSection favoritePlants={favoritePlants} plantCategories={plantCategories} />
+          <View style={{ paddingVertical: theme.spacing.xl }}>
+             <Text style={{ color: theme.colors.mutedForeground, textAlign: 'center' }}>
+                Explora y cuida tus plantas favoritas.
+             </Text>
+          </View>
         )}
       </View>
     </ScrollView>
