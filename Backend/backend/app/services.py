@@ -2,7 +2,8 @@
 
 from datetime import datetime
 from typing import Any
-
+import os
+import httpx
 from fastapi import HTTPException
 from firebase_admin import auth
 
@@ -204,38 +205,13 @@ def _generate_next_user_code(db) -> str:
     return f"usr-{max_number + 1}"
 
 
-def identify_plant_mock(image_data: str) -> dict[str, Any]:
+async def identify_plant_mock(images: list[str]) -> dict[str, Any]:
     """Identifica una planta usando la API real de Plant.id."""
-    import os
-    import httpx
-    import base64
 
     api_key = os.getenv("PLANT_ID_API_KEY")
     if not api_key:
-        # Fallback por si no hay clave configurada
         return {
             "name": "Error: API Key no configurada",
-            "category": "Desconocido",
-            "age": "N/A",
-            "growthTime": "N/A",
-            "height": "N/A",
-            "toxic": False,
-            "toxicTo": None,
-            "flowering": "Desconocida",
-            "status": "desconocido",
-            "lightPreference": "Desconocida",
-            "originLocality": "Desconocido",
-            "temperature": "N/A",
-            "fertilizerType": "N/A",
-            "description": "Por favor configura PLANT_ID_API_KEY en el archivo .env",
-        }
-
-    # Preparar la imagen (si viene con el prefijo 'data:image/jpeg;base64,', lo limpiamos)
-    if "," in image_data:
-        image_data = image_data.split(",")[1]
-
-    url = "https://api.plant.id/v3/identification"
-    headers = {"Api-Key": api_key}
             "scientific_name": "N/A",
             "category": "Error",
             "description": "Por favor configura PLANT_ID_API_KEY en el panel de Render.",
@@ -250,86 +226,97 @@ def identify_plant_mock(image_data: str) -> dict[str, Any]:
             "fertilizerType": "N/A",
         }
 
-    # Limpiar las imágenes (quitar prefijos base64 si existen)
-    cleaned_images = []
-    for img in images:
-        if "," in img:
-            cleaned_images.append(img.split(",")[1])
-        else:
-            cleaned_images.append(img)
+    try:
+        # 1. Limpiar imágenes
+        cleaned_images = []
+        for img in images:
+            if "," in img:
+                cleaned_images.append(img.split(",")[1])
+            else:
+                cleaned_images.append(img)
 
-    url = "https://plant.id/api/v3/identification"
-    headers = {"Api-Key": api_key, "Content-Type": "application/json"}
-    payload = {"images": cleaned_images, "similar_images": True}
+        # 2. Llamada a Plant.id v3
+        url = "https://plant.id/api/v3/identification"
+        headers = {"Api-Key": api_key, "Content-Type": "application/json"}
+        payload = {"images": cleaned_images, "similar_images": True}
 
-    async with httpx.AsyncClient() as client:
-        response = await client.post(url, json=payload, headers=headers, timeout=20.0)
-        if response.status_code != 201:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, json=payload, headers=headers, timeout=25.0)
+            
+            if response.status_code != 201:
+                return {
+                    "name": f"Error API ({response.status_code})",
+                    "scientific_name": "N/A",
+                    "category": "Error",
+                    "status": "error",
+                    "description": f"El servicio de IA respondió con error: {response.text}",
+                    "age": "N/A",
+                    "height": "N/A",
+                    "lightPreference": "N/A",
+                    "originLocality": "N/A",
+                    "flowering": "N/A",
+                    "temperature": "N/A",
+                    "toxic": False,
+                    "fertilizerType": "N/A",
+                }
+
+            data = response.json()
+            result = data.get("result", {})
+            classification = result.get("classification", {})
+            suggestions = classification.get("suggestions", [])
+
+            if not suggestions:
+                return {
+                    "name": "No identificada",
+                    "scientific_name": "N/A",
+                    "category": "N/A",
+                    "status": "unknown",
+                    "description": "No se encontraron coincidencias en la base de datos.",
+                    "age": "N/A",
+                    "height": "N/A",
+                    "lightPreference": "N/A",
+                    "originLocality": "N/A",
+                    "flowering": "N/A",
+                    "temperature": "N/A",
+                    "toxic": False,
+                    "fertilizerType": "N/A",
+                }
+
+            best = suggestions[0]
+            details = best.get("details", {})
+            common_names = details.get("common_names", [])
+            
+            name = common_names[0] if common_names else best.get("name", "Desconocido")
+
             return {
-                "name": f"Error API ({response.status_code})",
-                "scientific_name": "N/A",
-                "category": "Error",
-                "status": "error",
-                "age": "N/A",
-                "height": "N/A",
-                "lightPreference": "N/A",
-                "originLocality": "N/A",
-                "flowering": "N/A",
-                "temperature": "N/A",
-                "toxic": False,
+                "name": name.capitalize(),
+                "scientific_name": best.get("name", "Desconocido"),
+                "category": classification.get("taxonomy", {}).get("class", "Desconocida"),
+                "description": details.get("description", {}).get("value", "Sin descripción."),
+                "status": "saludable" if result.get("is_healthy", {}).get("binary", True) else "con problemas",
+                "age": "Recién identificada",
+                "height": "Variable",
+                "lightPreference": (details.get("sunlight") or "Variable").capitalize(),
+                "originLocality": "Nativa",
+                "flowering": (details.get("flowering") or "Variable").capitalize(),
+                "temperature": "15-25°C",
+                "toxic": details.get("toxicity") is not None,
                 "fertilizerType": "N/A",
             }
 
-        data = response.json()
-
-        # 3. Extraer el mejor resultado
-        result = data.get("result", {})
-        classification = result.get("classification", {})
-        suggestions = classification.get("suggestions", [])
-
-        if not suggestions:
-            raise ValueError("No se encontraron sugerencias para esta planta.")
-
-        # Tomamos la mejor sugerencia
-        best = suggestions[0]
-        details = best.get("details", {})
-        
-        # Mapeo de datos de la IA a nuestro formato
-        common_name = (details.get("common_names") or [best.get("name")])[0]
-        
-        return {
-            "name": common_name.capitalize(),
-            "scientific_name": best.get("name", "Desconocido"),
-            "category": classification.get("taxonomy", {}).get("class", "Planta"),
-            "age": "Recién identificada",
-            "growthTime": "Variable",
-            "height": "Depende del entorno",
-            "toxic": details.get("toxicity") is not None,
-            "toxicTo": "Mascotas/Niños" if details.get("toxicity") else None,
-            "flowering": "Según temporada",
-            "status": "saludable" if result.get("is_plant", {}).get("binary", True) else "con problemas",
-            "lightPreference": (details.get("sunlight") or "Sol parcial").capitalize(),
-            "originLocality": "Nativa",
-            "temperature": "15-25°C",
-            "fertilizerType": "Equilibrado",
-            "description": details.get("description", {}).get("value", "Sin descripción disponible."),
-        }
-
     except Exception as e:
-        print(f"Error llamando a Plant.id: {e}")
         return {
-            "name": "No identificada",
+            "name": "Error del Sistema",
+            "scientific_name": "N/A",
             "category": "Error",
-            "age": "N/A",
-            "growthTime": "N/A",
-            "height": "N/A",
-            "toxic": False,
-            "toxicTo": None,
-            "flowering": "N/A",
             "status": "error",
+            "description": f"Error interno: {str(e)}",
+            "age": "N/A",
+            "height": "N/A",
             "lightPreference": "N/A",
             "originLocality": "N/A",
+            "flowering": "N/A",
             "temperature": "N/A",
+            "toxic": False,
             "fertilizerType": "N/A",
-            "description": f"Hubo un problema con el servicio de IA: {str(e)}",
         }
