@@ -105,6 +105,20 @@ export function CameraScanner({ onScan, onClose }: CameraScannerProps) {
         closeButton: {
             position: 'absolute',
             top: Platform.OS === 'ios' ? 52 : 32,
+            left: theme.spacing.lg,
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: 'rgba(0,0,0,0.55)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.35)',
+            zIndex: 20,
+        },
+        flashButton: {
+            position: 'absolute',
+            top: Platform.OS === 'ios' ? 52 : 32,
             right: theme.spacing.lg,
             width: 40,
             height: 40,
@@ -127,36 +141,13 @@ export function CameraScanner({ onScan, onClose }: CameraScannerProps) {
         }
     });
 
-    if (!permissions) {
-        // Permissions are still loading
+    if (!permissions || !isPermissionGranted) {
         return <View style={styles.container} />;
     }
 
-    if (!isPermissionGranted) {
-        // We need permission
-        return (
-            <View style={styles.permissionContainer}>
-                <Text style={styles.permissionText}>
-                    Necesitamos tu permiso para acceder a la cámara y escanear tus plantas.
-                </Text>
-                {error ? (
-                    <Text style={[styles.permissionText, { color: theme.colors.destructive, marginBottom: theme.spacing.md }]}>
-                        {error}
-                    </Text>
-                ) : null}
-                <Button 
-                    title="Otorgar Permiso" 
-                    onPress={requestPermissions} 
-                    variant="primary" 
-                    icon="camera"
-                    loading={isLoadingPermissions}
-                />
-            </View>
-        );
-    }
-
     const handleCapture = async () => {
-        const photo = await takePhoto({ quality: 0.9, base64: false });
+        // Necesitamos base64: true para enviar la imagen real al servidor de IA
+        const photo = await takePhoto({ quality: 0.7, base64: true });
         if (photo && onScan) {
             onScan(photo);
         }
@@ -171,9 +162,18 @@ export function CameraScanner({ onScan, onClose }: CameraScannerProps) {
                     style={styles.closeButton}
                     onPress={onClose}
                     accessibilityRole="button"
-                    accessibilityLabel="Cerrar cámara"
+                    accessibilityLabel="Volver"
                 >
-                    <MaterialCommunityIcons name="close" size={24} color="white" />
+                    <MaterialCommunityIcons name="chevron-left" size={28} color="white" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={styles.flashButton}
+                    onPress={toggleFlash}
+                    accessibilityRole="button"
+                    accessibilityLabel="Cambiar flash"
+                >
+                    <MaterialCommunityIcons name={flashIcon as any} size={24} color="white" />
                 </TouchableOpacity>
 
                 <View style={styles.titleContainer}>
@@ -186,21 +186,17 @@ export function CameraScanner({ onScan, onClose }: CameraScannerProps) {
                 </View>
 
                 <View style={styles.controls}>
-                    <TouchableOpacity style={styles.flipButton} onPress={toggleFacing}>
-                        <MaterialCommunityIcons name="camera-flip-outline" size={28} color="white" />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={styles.flipButton} onPress={toggleFlash}>
-                        <MaterialCommunityIcons name={flashIcon as any} size={28} color="white" />
-                    </TouchableOpacity>
+                    {/* Espaciador para mantener simetría */}
+                    <View style={{ width: 44, height: 44, marginHorizontal: theme.spacing.md }} />
 
                     {/* Botón central para capturar foto real */}
                     <TouchableOpacity style={styles.captureButton} onPress={handleCapture}>
                         <View style={styles.captureInner} />
                     </TouchableOpacity>
-                    
-                    {/* Espaciador para mantener simetría */}
-                    <View style={{ width: 44, height: 44, marginHorizontal: theme.spacing.md }} />
+
+                    <TouchableOpacity style={styles.flipButton} onPress={toggleFacing}>
+                        <MaterialCommunityIcons name="camera-flip-outline" size={28} color="white" />
+                    </TouchableOpacity>
                 </View>
             </CameraView>
         </View>

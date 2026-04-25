@@ -29,32 +29,8 @@ export function CameraScanner({ onScan, onClose }: CameraScannerProps) {
     } = useCamera();
     const styles = createCameraScannerStyles(theme);
 
-    if (!permissions) {
-        // Permissions are still loading
+    if (!permissions || !isPermissionGranted) {
         return <View style={styles.container} />;
-    }
-
-    if (!isPermissionGranted) {
-        // We need permission
-        return (
-            <View style={styles.permissionContainer}>
-                <Text style={styles.permissionText}>
-                    Necesitamos tu permiso para acceder a la cámara y escanear tus plantas.
-                </Text>
-                {error ? (
-                    <Text style={[styles.permissionText, styles.permissionErrorText]}>
-                        {error}
-                    </Text>
-                ) : null}
-                <Button 
-                    title="Otorgar Permiso" 
-                    onPress={requestPermissions} 
-                    variant="primary" 
-                    icon="camera"
-                    loading={isLoadingPermissions}
-                />
-            </View>
-        );
     }
 
     const handleCapture = async () => {

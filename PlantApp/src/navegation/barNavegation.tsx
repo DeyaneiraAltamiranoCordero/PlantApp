@@ -7,7 +7,80 @@ import PlantCareScreen from '../screens/plantCare/PlantCare';
 import FriendsScreen from '../screens/friends/Friends';
 import ScannerScreen from '../screens/scanner/ScannerScreen';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { View } from 'react-native';
+import { View, Pressable, Alert, Linking } from 'react-native';
+import { useCameraPermissions } from 'expo-camera';
+import * as MediaLibrary from 'expo-media-library';
+import { useNavigation } from '@react-navigation/native';
+
+const CameraTabButton = () => {
+    const { theme } = useTheme();
+    const navigation = useNavigation<any>();
+    const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+    const [libraryPermission, requestLibraryPermission] = MediaLibrary.usePermissions();
+
+    const handlePress = async () => {
+        console.log("Cámara pulsada, verificando permisos...");
+        
+        if (!cameraPermission || !libraryPermission) {
+            return;
+        }
+
+        // Si ya tenemos cámara, navegamos directo
+        if (cameraPermission.granted) {
+            navigation.navigate('Scanner');
+            return;
+        }
+
+        // Si no, pedimos cámara (y galería de paso)
+        console.log("Solicitando permisos de cámara...");
+        const cameraResult = await requestCameraPermission();
+        
+        if (cameraResult.granted) {
+            // Aprovechamos para pedir galería si no la tiene
+            if (!libraryPermission.granted) {
+                await requestLibraryPermission();
+            }
+            navigation.navigate('Scanner');
+        } else {
+            if (!cameraResult.canAskAgain) {
+                Alert.alert(
+                    "Permiso requerido",
+                    "La cámara es esencial para escanear. Por favor, actívala en ajustes.",
+                    [
+                        { text: "Cancelar" },
+                        { text: "Ajustes", onPress: () => Linking.openSettings() }
+                    ]
+                );
+            }
+        }
+    };
+
+    return (
+        <Pressable
+            onPress={handlePress}
+            style={({ pressed }) => ({
+                opacity: pressed ? 0.7 : 1,
+            })}
+        >
+            <View style={{
+                top: -15,
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: theme.colors.primary,
+                width: 60,
+                height: 60,
+                borderRadius: 30,
+                elevation: 5,
+                shadowColor: theme.colors.primary,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 4,
+            }}>
+                <MaterialCommunityIcons name="camera" size={32} color="#FFFFFF" />
+            </View>
+        </Pressable>
+    );
+};
 
 const Tab = createBottomTabNavigator();
 
@@ -57,24 +130,7 @@ export default function TabNavigator() {
                 name="Scanner"
                 component={ScannerScreen}
                 options={{
-                    tabBarIcon: ({ color, size }) => (
-                        <View style={{
-                            top: -15,
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            backgroundColor: theme.colors.primary,
-                            width: 60,
-                            height: 60,
-                            borderRadius: 30,
-                            elevation: 5,
-                            shadowColor: theme.colors.primary,
-                            shadowOffset: { width: 0, height: 4 },
-                            shadowOpacity: 0.3,
-                            shadowRadius: 4,
-                        }}>
-                            <MaterialCommunityIcons name="camera" size={32} color="#FFFFFF" />
-                        </View>
-                    ),
+                    tabBarButton: () => <CameraTabButton />,
                 }}
             />
             <Tab.Screen

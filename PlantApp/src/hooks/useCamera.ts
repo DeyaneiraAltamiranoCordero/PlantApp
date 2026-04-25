@@ -44,8 +44,8 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
 
   const isPermissionGranted =
     !!permissions &&
-    PermissionService.isGranted(permissions.camera) &&
-    PermissionService.isGranted(permissions.mediaLibrary);
+    PermissionService.isGranted(permissions.camera);
+    // Quitamos la obligatoriedad de mediaLibrary para que no se pegue la pantalla
 
   const requestPermissions = useCallback(async () => {
     setIsLoadingPermissions(true);

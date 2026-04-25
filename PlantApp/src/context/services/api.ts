@@ -14,6 +14,7 @@ function resolveApiBaseUrl(): string {
 }
 
 const API_BASE_URL = resolveApiBaseUrl();
+console.log("Conectando con la API en:", API_BASE_URL);
 
 type ApiOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -127,6 +128,23 @@ export type Pest = {
   dangerLevel?: string;
   description?: string;
   treatment?: string;
+};
+
+export type IdentifyResult = {
+    name: string;
+    category: string;
+    age: string;
+    growthTime: string;
+    height: string;
+    toxic: boolean;
+    toxicTo: string | null;
+    flowering: string;
+    status: string;
+    lightPreference: string;
+    originLocality: string;
+    temperature: string;
+    fertilizerType: string;
+    description?: string;
 };
 
 const normalizeUser = (raw: unknown): User => {
@@ -641,4 +659,11 @@ export async function getPestDocument(pestId: string): Promise<Pest> {
     throw new Error(`Invalid pest payload for id '${pestId}'`);
   }
   return normalized;
+}
+
+export async function identifyPlant(base64Image: string): Promise<IdentifyResult> {
+    return apiRequest<IdentifyResult>('/api/identify', {
+        method: 'POST',
+        body: { image: base64Image },
+    });
 }
