@@ -205,26 +205,101 @@ def _generate_next_user_code(db) -> str:
 
 
 def identify_plant_mock(image_data: str) -> dict[str, Any]:
-    """Simula el analisis de una planta con IA."""
-    import time
+    """Identifica una planta usando la API real de Plant.id."""
+    import os
+    import httpx
+    import base64
 
-    # Simulamos el tiempo de procesamiento de la IA
-    time.sleep(2)
+    api_key = os.getenv("PLANT_ID_API_KEY")
+    if not api_key:
+        # Fallback por si no hay clave configurada
+        return {
+            "name": "Error: API Key no configurada",
+            "category": "Desconocido",
+            "age": "N/A",
+            "growthTime": "N/A",
+            "height": "N/A",
+            "toxic": False,
+            "toxicTo": None,
+            "flowering": "Desconocida",
+            "status": "desconocido",
+            "lightPreference": "Desconocida",
+            "originLocality": "Desconocido",
+            "temperature": "N/A",
+            "fertilizerType": "N/A",
+            "description": "Por favor configura PLANT_ID_API_KEY en el archivo .env",
+        }
 
-    # Devolvemos los datos mockeados del Romero
-    return {
-        "name": "Romero",
-        "category": "Planta de Exterior",
-        "age": "3 años",
-        "growthTime": "8 meses",
-        "height": "50 cm",
-        "toxic": False,
-        "toxicTo": None,
-        "flowering": "primavera",
-        "status": "saludable",
-        "lightPreference": "sol directo",
-        "originLocality": "Mediterráneo",
-        "temperature": "10-30°C",
-        "fertilizerType": "Compost orgánico",
-        "description": "Amor por las plantas y las flores. Ideal para condimentar tus comidas.",
+    # Preparar la imagen (si viene con el prefijo 'data:image/jpeg;base64,', lo limpiamos)
+    if "," in image_data:
+        image_data = image_data.split(",")[1]
+
+    url = "https://api.plant.id/v3/identification"
+    headers = {"Api-Key": api_key}
+    
+    # Pedimos detalles especificos para rellenar nuestra ficha
+    params = {
+        "details": "common_names,taxonomy,description,watering,sunlight,toxicity,propagation_methods"
     }
+    
+    payload = {
+        "images": [image_data],
+        "latitude": 9.9281,  # Opcional: Costa Rica por defecto
+        "longitude": -84.0907
+    }
+
+    try:
+        with httpx.Client(timeout=20.0) as client:
+            response = client.post(url, headers=headers, json=payload, params=params)
+            response.raise_for_status()
+            data = response.json()
+
+        result = data.get("result", {})
+        classification = result.get("classification", {})
+        suggestions = classification.get("suggestions", [])
+
+        if not suggestions:
+            raise ValueError("No se encontraron sugerencias para esta planta.")
+
+        # Tomamos la mejor sugerencia
+        best = suggestions[0]
+        details = best.get("details", {})
+        
+        # Mapeo de datos de la IA a nuestro formato
+        common_name = (details.get("common_names") or [best.get("name")])[0]
+        
+        return {
+            "name": common_name.capitalize(),
+            "category": classification.get("taxonomy", {}).get("class", "Planta"),
+            "age": "Recién identificada",
+            "growthTime": "Variable",
+            "height": "Depende del entorno",
+            "toxic": details.get("toxicity") is not None,
+            "toxicTo": "Mascotas/Niños" if details.get("toxicity") else None,
+            "flowering": "Según temporada",
+            "status": "saludable" if result.get("is_plant", {}).get("binary", True) else "con problemas",
+            "lightPreference": (details.get("sunlight") or "Sol parcial").capitalize(),
+            "originLocality": "Nativa",
+            "temperature": "15-25°C",
+            "fertilizerType": "Equilibrado",
+            "description": details.get("description", {}).get("value", "Sin descripción disponible."),
+        }
+
+    except Exception as e:
+        print(f"Error llamando a Plant.id: {e}")
+        return {
+            "name": "No identificada",
+            "category": "Error",
+            "age": "N/A",
+            "growthTime": "N/A",
+            "height": "N/A",
+            "toxic": False,
+            "toxicTo": None,
+            "flowering": "N/A",
+            "status": "error",
+            "lightPreference": "N/A",
+            "originLocality": "N/A",
+            "temperature": "N/A",
+            "fertilizerType": "N/A",
+            "description": f"Hubo un problema con el servicio de IA: {str(e)}",
+        }
