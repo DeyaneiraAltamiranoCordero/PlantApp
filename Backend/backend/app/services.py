@@ -236,24 +236,53 @@ def identify_plant_mock(image_data: str) -> dict[str, Any]:
 
     url = "https://api.plant.id/v3/identification"
     headers = {"Api-Key": api_key}
-    
-    # Pedimos detalles especificos para rellenar nuestra ficha
-    params = {
-        "details": "common_names,taxonomy,description,watering,sunlight,toxicity,propagation_methods"
-    }
-    
-    payload = {
-        "images": [image_data],
-        "latitude": 9.9281,  # Opcional: Costa Rica por defecto
-        "longitude": -84.0907
-    }
+            "scientific_name": "N/A",
+            "category": "Error",
+            "description": "Por favor configura PLANT_ID_API_KEY en el panel de Render.",
+            "status": "error",
+            "age": "N/A",
+            "height": "N/A",
+            "lightPreference": "N/A",
+            "originLocality": "N/A",
+            "flowering": "N/A",
+            "temperature": "N/A",
+            "toxic": False,
+            "fertilizerType": "N/A",
+        }
 
-    try:
-        with httpx.Client(timeout=20.0) as client:
-            response = client.post(url, headers=headers, json=payload, params=params)
-            response.raise_for_status()
-            data = response.json()
+    # Limpiar las imágenes (quitar prefijos base64 si existen)
+    cleaned_images = []
+    for img in images:
+        if "," in img:
+            cleaned_images.append(img.split(",")[1])
+        else:
+            cleaned_images.append(img)
 
+    url = "https://plant.id/api/v3/identification"
+    headers = {"Api-Key": api_key, "Content-Type": "application/json"}
+    payload = {"images": cleaned_images, "similar_images": True}
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, json=payload, headers=headers, timeout=20.0)
+        if response.status_code != 201:
+            return {
+                "name": f"Error API ({response.status_code})",
+                "scientific_name": "N/A",
+                "category": "Error",
+                "status": "error",
+                "age": "N/A",
+                "height": "N/A",
+                "lightPreference": "N/A",
+                "originLocality": "N/A",
+                "flowering": "N/A",
+                "temperature": "N/A",
+                "toxic": False,
+                "fertilizerType": "N/A",
+            }
+
+        data = response.json()
+
+        # 3. Extraer el mejor resultado
         result = data.get("result", {})
         classification = result.get("classification", {})
         suggestions = classification.get("suggestions", [])
