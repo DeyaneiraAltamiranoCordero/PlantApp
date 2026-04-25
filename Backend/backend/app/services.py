@@ -295,13 +295,15 @@ async def identify_plant_mock(images: list[str]) -> dict[str, Any]:
                 "description": details.get("description", {}).get("value", "Sin descripción."),
                 "status": "saludable" if result.get("is_healthy", {}).get("binary", True) else "con problemas",
                 "age": "Recién identificada",
+                "growthTime": "Variable",
                 "height": "Variable",
                 "lightPreference": (details.get("sunlight") or "Variable").capitalize(),
                 "originLocality": "Nativa",
                 "flowering": (details.get("flowering") or "Variable").capitalize(),
                 "temperature": "15-25°C",
                 "toxic": details.get("toxicity") is not None,
-                "fertilizerType": "N/A",
+                "toxicTo": "Mascotas/Niños" if details.get("toxicity") else None,
+                "fertilizerType": "Equilibrado",
             }
 
     except Exception as e:

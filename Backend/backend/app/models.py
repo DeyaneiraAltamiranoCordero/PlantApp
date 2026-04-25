@@ -141,16 +141,17 @@ class IdentifyResponse(BaseModel):
     """Result of AI plant identification analysis."""
 
     name: str
-    category: str
-    age: str
-    growthTime: str
-    height: str
-    toxic: bool
+    scientific_name: str | None = "N/A"
+    category: str = "Desconocida"
+    age: str = "N/A"
+    growthTime: str = "N/A"
+    height: str = "N/A"
+    toxic: bool = False
     toxicTo: str | None = None
-    flowering: str
-    status: str
-    lightPreference: str
-    originLocality: str
-    temperature: str
-    fertilizerType: str
+    flowering: str = "N/A"
+    status: str = "saludable"
+    lightPreference: str = "N/A"
+    originLocality: str = "N/A"
+    temperature: str = "N/A"
+    fertilizerType: str = "N/A"
     description: str | None = None
