@@ -241,12 +241,15 @@ async def identify_plant_mock(images: list[str]) -> dict[str, Any]:
         payload = {
             "images": cleaned_images, 
             "similar_images": True,
-            "classification": "all",
-            "details": ["common_names", "description", "taxonomy", "sunlight", "watering"]
+        }
+        # Los detalles se pueden pedir como parámetros de consulta en v3 para mayor compatibilidad
+        params = {
+            "details": "common_names,description,taxonomy,sunlight,watering",
+            "language": "es"
         }
 
         async with httpx.AsyncClient() as client:
-            response = await client.post(url, json=payload, headers=headers, timeout=30.0)
+            response = await client.post(url, json=payload, params=params, headers=headers, timeout=30.0)
             
             if response.status_code != 201:
                 print(f"DEBUG: Error API {response.status_code} - {response.text}")

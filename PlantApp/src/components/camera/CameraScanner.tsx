@@ -199,12 +199,12 @@ export function CameraScanner({ onScan, onClose }: CameraScannerProps) {
             return;
         }
 
-        // 2. Abrir la galería
+        // 2. Abrir la galería con optimización de tamaño
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ['images'],
             allowsEditing: true,
-            aspect: [4, 3],
-            quality: 0.7,
+            aspect: [1, 1], // Cuadrado suele ser mejor para IA
+            quality: 0.5,   // Bajamos un poco la calidad para asegurar rapidez
             base64: true,
         });
 
