@@ -230,13 +230,20 @@ def list_care_types_slug() -> list[dict[str, Any]]:
 
 
 @router.post("/api/identify", response_model=IdentifyResponse)
-def identify_plant_endpoint(payload: dict[str, Any] = Body(..., embed=False)) -> dict[str, Any]:
+async def identify_plant_endpoint(payload: dict[str, Any] = Body(..., embed=False)) -> dict[str, Any]:
     """Identifica una planta a partir de una imagen."""
-    image_data = payload.get("image", "")
-    if not image_data:
-        raise HTTPException(status_code=400, detail="Se requiere la imagen para el analisis.")
+    # Aceptamos tanto 'image' como 'images' para mayor compatibilidad
+    images = payload.get("images", [])
+    single_image = payload.get("image")
     
-    return identify_plant_mock(image_data)
+    if not images and single_image:
+        images = [single_image]
+        
+    if not images:
+        raise HTTPException(status_code=400, detail="Se requiere al menos una imagen para el análisis.")
+    
+    # Ahora llamamos con await porque la función es async
+    return await identify_plant_mock(images)
 
 
 @router.get("/api/{collection_name}", response_model=list[dict[str, Any]])
