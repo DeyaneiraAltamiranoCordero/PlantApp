@@ -8,6 +8,7 @@ import { useLoginTheme } from './Login.styles';
 export default function LoginScreen() {
   const { signInWithGoogle, loading } = useAuth();
   const { styles, theme } = useLoginTheme();
+  console.log('[LoginScreen] Rendering');
 
   const handleGoogleSignIn = async () => {
     try {

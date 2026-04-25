@@ -7,7 +7,7 @@
     "icon": "./assets/images/hojas.png",
     "scheme": "com.plantapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.plantapp"

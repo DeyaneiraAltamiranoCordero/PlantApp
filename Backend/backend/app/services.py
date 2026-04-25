@@ -238,7 +238,12 @@ async def identify_plant_mock(images: list[str]) -> dict[str, Any]:
 
         url = "https://plant.id/api/v3/identification"
         headers = {"Api-Key": api_key, "Content-Type": "application/json"}
-        payload = {"images": cleaned_images, "similar_images": True}
+        payload = {
+            "images": cleaned_images, 
+            "similar_images": True,
+            "classification": "all",
+            "details": ["common_names", "description", "taxonomy", "sunlight", "watering"]
+        }
 
         async with httpx.AsyncClient() as client:
             response = await client.post(url, json=payload, headers=headers, timeout=30.0)

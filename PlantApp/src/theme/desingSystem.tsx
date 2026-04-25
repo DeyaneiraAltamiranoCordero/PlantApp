@@ -181,8 +181,8 @@ const darkColors: ThemeColors = {
 const typography: ThemeTypography = {
     fontFamily: {
         default: "Nunito",
-        semibold: "Nunito",
-        bold: "Nunito",
+        semibold: "Nunito-SemiBold",
+        bold: "Nunito-Bold",
     },
     size: {
         sm: 12,

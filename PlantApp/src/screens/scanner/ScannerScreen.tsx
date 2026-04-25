@@ -34,6 +34,64 @@ export default function ScannerScreen({ navigation }: any) {
         }
     };
 
+    const handleSave = async () => {
+        if (!result) return;
+        
+        setIsAnalyzing(true); // Usamos el mismo estado de carga
+        try {
+            // 1. Preparamos el objeto para Firestore según tu PlantModel
+            const newPlant = {
+                name: result.name,
+                scientificName: result.scientific_name,
+                categoryId: "cat-general", // Categoría por defecto
+                age: result.age || "0",
+                price: 0,
+                growthTime: result.growthTime || "N/A",
+                height: result.height || "N/A",
+                isFavorite: false,
+                toxic: result.toxic,
+                toxicTo: result.toxicTo,
+                flowering: result.flowering,
+                status: result.status,
+                lightPreference: result.lightPreference,
+                originLocality: result.originLocality,
+                temperature: result.temperature,
+                fertilizerType: result.fertilizerType,
+                description: result.description,
+                lastWatered: new Date().toISOString(),
+                lastFertilized: new Date().toISOString(),
+                imageUrl: "https://images.unsplash.com/photo-1545239351-ef35f43d514b?q=80&w=1000&auto=format&fit=crop", // Imagen temporal
+                userId: "usr-1", // Esto lo ideal es sacarlo de tu AuthContext
+                careTypes: [],
+                pests: []
+            };
+
+            // 2. Llamada al backend para guardar
+            console.log("Guardando planta en el jardín...");
+            // Usamos la ruta genérica que ya tienes en el backend para crear documentos
+            const response = await fetch(`https://plantapp-7iyo.onrender.com/api/plants`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newPlant)
+            });
+
+            if (response.ok) {
+                Alert.alert(
+                    "¡Éxito!",
+                    `${result.name} ha sido añadida a tu jardín.`,
+                    [{ text: "Ir al inicio", onPress: () => navigation.navigate('Home') }]
+                );
+            } else {
+                throw new Error("Error al guardar en el servidor");
+            }
+        } catch (error) {
+            console.error("Error guardando planta:", error);
+            Alert.alert("Error", "No pudimos guardar la planta en tu jardín.");
+        } finally {
+            setIsAnalyzing(false);
+        }
+    };
+
     const handleClose = () => {
         if (result) {
             setResult(null);
@@ -54,7 +112,7 @@ export default function ScannerScreen({ navigation }: any) {
             {isAnalyzing && (
                 <View style={styles.loadingOverlay}>
                     <ActivityIndicator size="large" color={theme.colors.primary} />
-                    <Text style={[styles.loadingText, { color: 'white' }]}>Analizando planta...</Text>
+                    <Text style={[styles.loadingText, { color: 'white' }]}>Procesando...</Text>
                 </View>
             )}
 
@@ -107,7 +165,7 @@ export default function ScannerScreen({ navigation }: any) {
 
                     <TouchableOpacity 
                         style={[styles.addButton, { backgroundColor: theme.colors.primary }]}
-                        onPress={() => Alert.alert("Guardar", "Función de guardado en desarrollo.")}
+                        onPress={handleSave}
                     >
                         <Text style={styles.addButtonText}>Añadir a mi jardín</Text>
                     </TouchableOpacity>

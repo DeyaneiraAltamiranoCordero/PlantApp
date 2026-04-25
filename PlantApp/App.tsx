@@ -1,8 +1,10 @@
+import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from "react";
-import { ActivityIndicator, View } from "react-native";
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, View, Text } from "react-native";
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as SplashScreen from 'expo-splash-screen';
 
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
 import { ToastProvider } from './src/context/ToastContext';
@@ -10,23 +12,40 @@ import TabNavigator from "./src/navegation/barNavegation";
 import LoginScreen from './src/screens/login/Login';
 import UserProfileScreen from './src/screens/userProfile/UserProfile';
 import { ThemeProvider, useTheme } from "./src/theme/desingSystem";
+import { useFonts, Nunito_400Regular, Nunito_600SemiBold, Nunito_700Bold } from '@expo-google-fonts/nunito';
 
 const Stack = createNativeStackNavigator();
 
 function Navigation() {
-  const { theme } = useTheme() || { theme: { colors: { background: '#ffffff', primary: '#000000' } } };
-  const { loading, currentUser } = useAuth();
+  const themeContext = useTheme();
+  const theme = themeContext?.theme || { colors: { background: '#ffffff', primary: '#2D5A27' } };
+  const { loading: authLoading, currentUser } = useAuth();
+
+  const [fontsLoaded] = useFonts({
+    'Nunito': Nunito_400Regular,
+    'Nunito-SemiBold': Nunito_600SemiBold,
+    'Nunito-Bold': Nunito_700Bold,
+  });
+
+  const loading = authLoading || !fontsLoaded;
+
+  React.useEffect(() => {
+    if (!loading) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [loading]);
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background, justifyContent: 'center', alignItems: 'center' }} edges={['top']}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </SafeAreaView>
+      <View style={{ flex: 1, backgroundColor: '#ffffff', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#2D5A27" />
+        <Text style={{ marginTop: 10 }}>Cargando...</Text>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }} edges={['top']}>
+    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <NavigationContainer>
         <Stack.Navigator
           key={currentUser ? 'auth' : 'guest'}
@@ -38,19 +57,18 @@ function Navigation() {
           <Stack.Screen name="UserProfile" component={UserProfileScreen} />
         </Stack.Navigator>
       </NavigationContainer>
-    </SafeAreaView>
+    </View>
   );
 }
 
 export default function App() {
   return (
     <SafeAreaProvider>
+      <StatusBar style="auto" />
       <ThemeProvider>
         <ToastProvider>
           <AuthProvider>
-            <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
-              <Navigation />
-            </View>
+            <Navigation />
           </AuthProvider>
         </ToastProvider>
       </ThemeProvider>
