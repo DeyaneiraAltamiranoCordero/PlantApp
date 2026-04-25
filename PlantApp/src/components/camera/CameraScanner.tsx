@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Platform, Alert } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Platform, Alert, ActivityIndicator } from 'react-native';
 import { CameraView } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -26,7 +26,7 @@ export function CameraScanner({ onScan, onClose }: CameraScannerProps) {
         toggleFacing,
         toggleFlash,
         error,
-    } = useCamera();
+    } = useCamera({ requestOnMount: false });
 
     const styles = StyleSheet.create({
         container: {
@@ -149,15 +149,45 @@ export function CameraScanner({ onScan, onClose }: CameraScannerProps) {
         }
     });
 
-    if (!permissions || !isPermissionGranted) {
-        return <View style={styles.container} />;
+    React.useEffect(() => {
+        // Al entrar, verificamos permisos una vez para que el estado local del hook se actualice
+        requestPermissions();
+    }, []);
+
+    if (isLoadingPermissions || !permissions) {
+        return (
+            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+                <Text style={{ color: theme.colors.foreground, marginTop: 10 }}>Iniciando cámara...</Text>
+            </View>
+        );
+    }
+
+    if (!isPermissionGranted) {
+        return (
+            <View style={styles.permissionContainer}>
+                <Text style={styles.permissionText}>No tenemos permiso para usar la cámara</Text>
+                <Button title="Conceder Permiso" onPress={requestPermissions} />
+            </View>
+        );
     }
 
     const handleCapture = async () => {
         // Necesitamos base64: true para enviar la imagen real al servidor de IA
         const photo = await takePhoto({ quality: 0.7, base64: true });
-        if (photo && onScan) {
-            onScan(photo);
+        
+        if (photo) {
+            // Guardar en la galería automáticamente
+            try {
+                await MediaLibrary.saveToLibraryAsync(photo.uri);
+                console.log("Foto guardada en la galería.");
+            } catch (err) {
+                console.warn("No se pudo guardar en la galería:", err);
+            }
+
+            if (onScan) {
+                onScan(photo);
+            }
         }
     };
 
