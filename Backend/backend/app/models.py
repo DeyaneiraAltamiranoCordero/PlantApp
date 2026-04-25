@@ -140,7 +140,7 @@ class ApiCollectionResponse(BaseModel):
 class IdentifyResponse(BaseModel):
     """Result of AI plant identification analysis."""
 
-    name: str
+    name: str = "Desconocido"
     scientific_name: str | None = "N/A"
     category: str = "Desconocida"
     age: str = "N/A"
@@ -154,4 +154,4 @@ class IdentifyResponse(BaseModel):
     originLocality: str = "N/A"
     temperature: str = "N/A"
     fertilizerType: str = "N/A"
-    description: str | None = None
+    description: str | None = "Sin descripción disponible."

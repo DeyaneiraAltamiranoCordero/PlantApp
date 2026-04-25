@@ -207,8 +207,9 @@ def _generate_next_user_code(db) -> str:
 
 async def identify_plant_mock(images: list[str]) -> dict[str, Any]:
     """Identifica una planta usando la API real de Plant.id."""
-
+    print(f"DEBUG: Iniciando identificación para {len(images)} imágenes")
     api_key = os.getenv("PLANT_ID_API_KEY")
+    
     if not api_key:
         return {
             "name": "Error: API Key no configurada",
@@ -217,6 +218,7 @@ async def identify_plant_mock(images: list[str]) -> dict[str, Any]:
             "description": "Por favor configura PLANT_ID_API_KEY en el panel de Render.",
             "status": "error",
             "age": "N/A",
+            "growthTime": "N/A",
             "height": "N/A",
             "lightPreference": "N/A",
             "originLocality": "N/A",
@@ -227,7 +229,6 @@ async def identify_plant_mock(images: list[str]) -> dict[str, Any]:
         }
 
     try:
-        # 1. Limpiar imágenes
         cleaned_images = []
         for img in images:
             if "," in img:
@@ -235,22 +236,23 @@ async def identify_plant_mock(images: list[str]) -> dict[str, Any]:
             else:
                 cleaned_images.append(img)
 
-        # 2. Llamada a Plant.id v3
         url = "https://plant.id/api/v3/identification"
         headers = {"Api-Key": api_key, "Content-Type": "application/json"}
         payload = {"images": cleaned_images, "similar_images": True}
 
         async with httpx.AsyncClient() as client:
-            response = await client.post(url, json=payload, headers=headers, timeout=25.0)
+            response = await client.post(url, json=payload, headers=headers, timeout=30.0)
             
             if response.status_code != 201:
+                print(f"DEBUG: Error API {response.status_code} - {response.text}")
                 return {
                     "name": f"Error API ({response.status_code})",
                     "scientific_name": "N/A",
                     "category": "Error",
                     "status": "error",
-                    "description": f"El servicio de IA respondió con error: {response.text}",
+                    "description": f"Error de Plant.id: {response.text[:100]}",
                     "age": "N/A",
+                    "growthTime": "N/A",
                     "height": "N/A",
                     "lightPreference": "N/A",
                     "originLocality": "N/A",
@@ -271,8 +273,9 @@ async def identify_plant_mock(images: list[str]) -> dict[str, Any]:
                     "scientific_name": "N/A",
                     "category": "N/A",
                     "status": "unknown",
-                    "description": "No se encontraron coincidencias en la base de datos.",
+                    "description": "No se encontraron resultados para esta imagen.",
                     "age": "N/A",
+                    "growthTime": "N/A",
                     "height": "N/A",
                     "lightPreference": "N/A",
                     "originLocality": "N/A",
@@ -307,13 +310,15 @@ async def identify_plant_mock(images: list[str]) -> dict[str, Any]:
             }
 
     except Exception as e:
+        print(f"DEBUG: Excepción en identify_plant_mock: {str(e)}")
         return {
             "name": "Error del Sistema",
             "scientific_name": "N/A",
             "category": "Error",
             "status": "error",
-            "description": f"Error interno: {str(e)}",
+            "description": f"Excepción: {str(e)[:100]}",
             "age": "N/A",
+            "growthTime": "N/A",
             "height": "N/A",
             "lightPreference": "N/A",
             "originLocality": "N/A",
