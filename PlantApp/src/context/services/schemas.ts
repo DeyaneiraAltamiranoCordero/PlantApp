@@ -68,6 +68,19 @@ export const PlantCareDateInputSchema = z
   }, 'Fecha inválida. Usá DD/MM/AAAA o YYYY-MM-DD.')
   .transform((value) => value);
 
+export const PlantPriceInputSchema = z
+  .string()
+  .transform((value) => value.trim())
+  .refine((value) => {
+    if (!value) return true;
+    // Accept integers or decimals (dot/comma).
+    if (!/^(\d+)([\.,]\d+)?$/.test(value)) return false;
+    const normalized = value.replace(',', '.');
+    const num = Number(normalized);
+    return Number.isFinite(num);
+  }, 'Precio inválido. Usá solo números (ej. 15 o 15.50).')
+  .transform((value) => value.replace(',', '.'));
+
 export const CategorySchema = z
   .object({
     id: z.string(),

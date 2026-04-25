@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, TextInput, View } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, Text, TextInput, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { MyPlantsSection } from '../../components/screenHome/MyPlantsSection';
 import { useAuth } from '../../context/AuthContext';
@@ -31,62 +32,66 @@ export default function HomeScreen() {
     return emailPrefix || 'Usuario';
   }, [currentUser]);
 
-  useEffect(() => {
+  const loadSummary = useCallback(async (showLoading = true) => {
     if (!currentUser) return;
+    if (showLoading) setIsLoading(true);
 
-    let isMounted = true;
-    const loadSummary = async () => {
-      setIsLoading(true);
-      try {
-        const [profile, plants] = await Promise.all([
-          getUserProfile(currentUser.uid),
-          getUserPlants(currentUser.uid),
-        ]);
-        if (!isMounted) return;
+    try {
+      const [profile, plants] = await Promise.all([
+        getUserProfile(currentUser.uid),
+        getUserPlants(currentUser.uid),
+      ]);
 
-        const favoriteNamesFromEndpoint = uniqueStrings(
-          profile.favoritePlants?.map((p) => p.name) ?? [],
-        );
-        const favoriteNamesFromPlants = uniqueStrings(
-          (plants ?? []).filter((p) => Boolean(p.isFavorite)).map((p) => p.name),
-        );
+      const favoriteNamesFromEndpoint = uniqueStrings(
+        profile.favoritePlants?.map((p) => p.name) ?? [],
+      );
+      const favoriteNamesFromPlants = uniqueStrings(
+        (plants ?? []).filter((p) => Boolean(p.isFavorite)).map((p) => p.name),
+      );
 
-        setFavoritePlants(
-          favoriteNamesFromEndpoint.length > 0
-            ? favoriteNamesFromEndpoint
-            : favoriteNamesFromPlants,
-        );
+      setFavoritePlants(
+        favoriteNamesFromEndpoint.length > 0
+          ? favoriteNamesFromEndpoint
+          : favoriteNamesFromPlants,
+      );
 
-        const categoryNamesFromProfile = uniqueStrings(profile.categories?.map((c) => c.name) ?? []);
-        const categoryNamesFromPlants = uniqueStrings(profile.plants?.map((p) => p.categoryName) ?? []);
-        setPlantCategories(
-          categoryNamesFromProfile.length > 0 ? categoryNamesFromProfile : categoryNamesFromPlants,
-        );
-      } catch (error) {
-        if (error instanceof ApiError && error.status === 404) {
-          if (!isMounted) return;
-          setFavoritePlants([]);
-          setPlantCategories([]);
-          return;
-        }
-        console.error('Error al cargar resumen:', error);
-        Alert.alert('Error', 'No se pudo cargar el resumen.');
-      } finally {
-        if (isMounted) setIsLoading(false);
+      const categoryNamesFromProfile = uniqueStrings(profile.categories?.map((c) => c.name) ?? []);
+      const categoryNamesFromPlants = uniqueStrings(profile.plants?.map((p) => p.categoryName) ?? []);
+      setPlantCategories(
+        categoryNamesFromProfile.length > 0 ? categoryNamesFromProfile : categoryNamesFromPlants,
+      );
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        setFavoritePlants([]);
+        setPlantCategories([]);
+        return;
       }
-    };
-
-    loadSummary();
-    return () => {
-      isMounted = false;
-    };
+      console.error('Error al cargar resumen:', error);
+      Alert.alert('Error', 'No se pudo cargar el resumen.');
+    } finally {
+      setIsLoading(false);
+    }
   }, [currentUser]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadSummary(favoritePlants.length === 0 && plantCategories.length === 0);
+    }, [loadSummary, favoritePlants.length, plantCategories.length])
+  );
 
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
       keyboardShouldPersistTaps="handled"
+      refreshControl={
+        <RefreshControl
+          refreshing={isLoading}
+          onRefresh={() => loadSummary(true)}
+          colors={[theme.colors.primary]}
+          tintColor={theme.colors.primary}
+        />
+      }
     >
       <View style={styles.header}>
         <Text style={styles.greeting}>Hola,</Text>

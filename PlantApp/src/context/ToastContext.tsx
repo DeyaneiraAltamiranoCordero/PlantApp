@@ -11,11 +11,12 @@ export type ToastInput = {
   durationMs?: number;
 };
 
-type ToastItem = ToastInput & {
+export type ToastItem = ToastInput & {
   id: string;
 };
 
 type ToastContextValue = {
+  toasts: ToastItem[];
   showToast: (input: ToastInput) => string;
   dismissToast: (id: string) => void;
   clearToasts: () => void;
@@ -76,39 +77,52 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   );
 
   const ctxValue = React.useMemo<ToastContextValue>(
-    () => ({ showToast, dismissToast, clearToasts }),
-    [showToast, dismissToast, clearToasts],
+    () => ({ toasts, showToast, dismissToast, clearToasts }),
+    [toasts, showToast, dismissToast, clearToasts],
   );
-
-  const styles = React.useMemo(() => createStyles(theme), [theme]);
 
   return (
     <ToastContext.Provider value={ctxValue}>
       {children}
-      <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
-        <View
-          pointerEvents="box-none"
-          style={[
-            styles.stack,
-            {
-              top: insets.top + theme.spacing.lg,
-              left: 0,
-              right: 0,
-            },
-          ]}
-        >
-          {toasts.map((t) => (
-            <ToastTab
-              key={t.id}
-              kind={t.kind}
-              title={t.title}
-              message={t.message}
-              onClose={() => dismissToast(t.id)}
-            />
-          ))}
-        </View>
-      </View>
+      <ToastViewport topOffset={insets.top + theme.spacing.lg} />
     </ToastContext.Provider>
+  );
+}
+
+export function ToastViewport({ topOffset }: { topOffset?: number }) {
+  const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { toasts, dismissToast } = useToast();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
+  if (!toasts || toasts.length === 0) return null;
+
+  const top = typeof topOffset === 'number' ? topOffset : insets.top + theme.spacing.lg;
+
+  return (
+    <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+      <View
+        pointerEvents="box-none"
+        style={[
+          styles.stack,
+          {
+            top,
+            left: 0,
+            right: 0,
+          },
+        ]}
+      >
+        {toasts.map((t) => (
+          <ToastTab
+            key={t.id}
+            kind={t.kind}
+            title={t.title}
+            message={t.message}
+            onClose={() => dismissToast(t.id)}
+          />
+        ))}
+      </View>
+    </View>
   );
 }
 

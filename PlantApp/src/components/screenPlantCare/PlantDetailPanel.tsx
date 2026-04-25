@@ -8,7 +8,7 @@ import { Button } from '../ui/Button';
 import { AddItemCard } from '../ui/AddItemCard';
 import { InfoCard } from '../ui/InfoCard';
 import { ModalHeader } from '../ui/ModalHeader';
-import { useToast } from '../../context/ToastContext';
+import { ToastViewport, useToast } from '../../context/ToastContext';
 
 type CareTypeInfo = {
   id: string;
@@ -108,6 +108,69 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
       cancelled = true;
     };
   }, [visible]);
+
+  useEffect(() => {
+    if (!visible) return;
+    if (!isPestsVisible) return;
+    if (!plant) return;
+
+    // Always try to keep the catalog warm.
+    void ensurePestsLoaded();
+
+    const pestIds =
+      Array.isArray(plant.pestIds) && plant.pestIds.length > 0
+        ? plant.pestIds
+        : normalizeIdArray(plant.pests);
+
+    const plantPestObjectIds = new Set(
+      (Array.isArray(plant.pests) ? plant.pests : [])
+        .map((item) => (typeof item === 'string' ? null : item))
+        .filter(Boolean)
+        .map((item) => (item as Pest).id),
+    );
+    const catalogIds = new Set(pestsCatalog.map((item) => item.id));
+
+    const missingIds = pestIds.filter((id) => {
+      if (!id) return false;
+      if (plantPestObjectIds.has(id)) return false;
+      if (catalogIds.has(id)) return false;
+      if (PEST_CATALOG[id]) return false;
+      if (requestedPestIdsRef.current.has(id)) return false;
+      if (notFoundPestIdsRef.current.has(id)) return false;
+      return true;
+    });
+
+    if (missingIds.length === 0) return;
+
+    missingIds.forEach((id) => requestedPestIdsRef.current.add(id));
+
+    void (async () => {
+      const results = await Promise.all(
+        missingIds.map(async (id) => {
+          try {
+            return await getPestDocument(id);
+          } catch (error) {
+            console.warn('No se pudo resolver la plaga por ID', { pestId: id, error });
+            notFoundPestIdsRef.current.add(id);
+            return null;
+          }
+        }),
+      );
+
+      const resolved = results.filter((item): item is Pest => Boolean(item));
+      if (resolved.length === 0) return;
+
+      setPestsCatalog((prev) => {
+        const known = new Map(prev.map((item) => [item.id, item] as const));
+        resolved.forEach((item) => known.set(item.id, item));
+        return Array.from(known.values());
+      });
+    })();
+  }, [visible, isPestsVisible, plant, pestsCatalog]);
+
+  if (!plant) {
+    return null;
+  }
 
   const pestIds =
     Array.isArray(plant?.pestIds) && plant.pestIds.length > 0
@@ -221,62 +284,6 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
     }
   };
 
-  useEffect(() => {
-    if (!plant) return;
-    if (!isPestsVisible) return;
-
-    // Always try to keep the catalog warm.
-    void ensurePestsLoaded();
-
-    const plantPestObjectIds = new Set(
-      (Array.isArray(plant.pests) ? plant.pests : [])
-        .map((item) => (typeof item === 'string' ? null : item))
-        .filter(Boolean)
-        .map((item) => (item as Pest).id),
-    );
-    const catalogIds = new Set(pestsCatalog.map((item) => item.id));
-
-    const missingIds = pestIds.filter((id) => {
-      if (!id) return false;
-      if (plantPestObjectIds.has(id)) return false;
-      if (catalogIds.has(id)) return false;
-      if (PEST_CATALOG[id]) return false;
-      if (requestedPestIdsRef.current.has(id)) return false;
-      if (notFoundPestIdsRef.current.has(id)) return false;
-      return true;
-    });
-
-    if (missingIds.length === 0) return;
-
-    missingIds.forEach((id) => requestedPestIdsRef.current.add(id));
-
-    void (async () => {
-      const results = await Promise.all(
-        missingIds.map(async (id) => {
-          try {
-            return await getPestDocument(id);
-          } catch (error) {
-            console.warn('No se pudo resolver la plaga por ID', { pestId: id, error });
-            notFoundPestIdsRef.current.add(id);
-            return null;
-          }
-        }),
-      );
-
-      const resolved = results.filter((item): item is Pest => Boolean(item));
-      if (resolved.length === 0) return;
-
-      setPestsCatalog((prev) => {
-        const known = new Map(prev.map((item) => [item.id, item] as const));
-        resolved.forEach((item) => known.set(item.id, item));
-        return Array.from(known.values());
-      });
-    })();
-  }, [isPestsVisible, pestIds, pestsCatalog, plant?.pests, plant]);
-
-  if (!plant) {
-    return null;
-  }
 
   const getPestInfo = (pestId: string): PestInfo => {
     const fromPlant = plantPestsMap.get(pestId);
@@ -420,7 +427,7 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
           .filter(Boolean);
 
       const careTypes = parseList(values.careTypes);
-      const price = values.price.trim() ? Number(values.price) : undefined;
+      const price = values.price.trim() ? Number(values.price.replace(',', '.')) : undefined;
       const nextStatus = pestsCount > 0 ? 'Enferma' : 'Saludable';
 
       const nextCategoryIds = Array.isArray(values.categoryIds) ? values.categoryIds : [];
@@ -469,6 +476,7 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <ToastViewport />
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
         <View style={{ paddingHorizontal: theme.spacing.xl, paddingTop: theme.spacing.xl }}>
           <Text
@@ -515,6 +523,7 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
         onRequestClose={() => setIsPestsVisible(false)}
       >
         <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+          <ToastViewport />
           <ModalHeader
             title="Plagas"
             subtitle={
@@ -680,6 +689,7 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
         onRequestClose={() => setIsAddPestVisible(false)}
       >
         <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+          <ToastViewport />
           <ModalHeader
             title="Agregar plaga"
             subtitle="Elegí una plaga para agregarla a esta planta."
@@ -736,6 +746,7 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
         onRequestClose={() => setIsCareTypesVisible(false)}
       >
         <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+          <ToastViewport />
           <ModalHeader
             title="Tipos de cuidado"
             subtitle={
@@ -842,6 +853,7 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
         onRequestClose={() => setIsAddCareTypeVisible(false)}
       >
         <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+          <ToastViewport />
           <ModalHeader
             title="Agregar tipo de cuidado"
             subtitle="Elegí un tipo de cuidado para agregarlo a esta planta."

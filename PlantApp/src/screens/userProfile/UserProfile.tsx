@@ -2,6 +2,7 @@ import { useNavigation } from '@react-navigation/native';
 import React from "react";
 import { ActivityIndicator, Alert, ScrollView, View } from "react-native";
 import { PersonalInfoForm } from "../../components/screenUserProfile/PersonalInfoForm";
+import { MyPlantsSection } from "../../components/screenHome/MyPlantsSection";
 import { ProfileHeader } from "../../components/screenUserProfile/ProfileHeader";
 import { SettingsPanel } from "../../components/screenUserProfile/SettingsPanel";
 import { StatsBar } from "../../components/screenUserProfile/StatsBar";
@@ -28,6 +29,8 @@ export default function UserProfile() {
         friendsCount,
         isPrivate,
         setIsPrivate,
+        favoritePlants,
+        plantCategories,
         isLoadingProfile,
         isSaving,
     } = useUserProfileController({ currentUser });
@@ -94,6 +97,10 @@ export default function UserProfile() {
 
             <PersonalInfoForm
                 control={control}
+            />
+            <MyPlantsSection
+                favoritePlants={favoritePlants}
+                plantCategories={plantCategories}
             />
             <SettingsPanel
                 isPrivate={isPrivate}

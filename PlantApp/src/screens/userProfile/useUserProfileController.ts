@@ -42,6 +42,8 @@ export function useUserProfileController({ currentUser }: Params) {
   const [streakCount, setStreakCount] = useState(0);
   const [friendsCount, setFriendsCount] = useState(0);
   const [isPrivate, setIsPrivate] = useState(false);
+  const [favoritePlants, setFavoritePlants] = useState<string[]>([]);
+  const [plantCategories, setPlantCategories] = useState<string[]>([]);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -70,6 +72,8 @@ export function useUserProfileController({ currentUser }: Params) {
     setStreakCount(0);
     setFriendsCount(0);
     setIsPrivate(false);
+    setFavoritePlants([]);
+    setPlantCategories([]);
   };
 
   useEffect(() => {
@@ -116,6 +120,24 @@ export function useUserProfileController({ currentUser }: Params) {
         const friendsLength = Array.isArray(profile.friends) ? profile.friends.length : undefined;
         setFriendsCount(friendsLength ?? stats.friendsCount ?? 0);
         setIsPrivate(profile.user.isPrivate ?? profile.user.publicProfile === false);
+
+        // Extract favorites and categories
+        const uniqueStrings = (items: Array<string | undefined | null>) => {
+          const normalized = items
+            .map((item) => item?.trim())
+            .filter((item): item is string => Boolean(item));
+          return Array.from(new Set(normalized));
+        };
+
+        const favsFromEndpoint = uniqueStrings(profile.favoritePlants?.map((p) => p.name) ?? []);
+        const favsFromPlants = uniqueStrings(
+          (profile.plants ?? []).filter((p) => Boolean(p.isFavorite)).map((p) => p.name),
+        );
+        setFavoritePlants(favsFromEndpoint.length > 0 ? favsFromEndpoint : favsFromPlants);
+
+        const catsFromProfile = uniqueStrings(profile.categories?.map((c) => c.name) ?? []);
+        const catsFromPlants = uniqueStrings(profile.plants?.map((p) => p.categoryName) ?? []);
+        setPlantCategories(catsFromProfile.length > 0 ? catsFromProfile : catsFromPlants);
       } catch (error) {
         if (error instanceof ApiError && error.status === 404) {
           if (!isMounted) return;
@@ -200,6 +222,8 @@ export function useUserProfileController({ currentUser }: Params) {
     friendsCount,
     isPrivate,
     setIsPrivate,
+    favoritePlants,
+    plantCategories,
     isLoadingProfile,
     isSaving,
   };

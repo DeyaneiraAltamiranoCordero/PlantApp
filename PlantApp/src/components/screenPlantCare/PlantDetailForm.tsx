@@ -9,7 +9,7 @@ import { SelectBox } from '../ui/SelectBox';
 import { usePlantCareStyles } from '../../screens/plantCare/PlantCare.style';
 import { AppTheme } from '../../theme/desingSystem';
 import { useToast } from '../../context/ToastContext';
-import { PlantCareDateInputSchema } from '../../context/services/schemas';
+import { PlantCareDateInputSchema, PlantPriceInputSchema } from '../../context/services/schemas';
 
 const pad2 = (value: number) => String(value).padStart(2, '0');
 
@@ -113,6 +113,7 @@ export function PlantDetailForm({
   const formStyles = useMemo(() => createFormStyles(theme), [theme]);
   const [isCategoryPickerVisible, setIsCategoryPickerVisible] = useState(false);
   const [isCategorySelectOpen, setIsCategorySelectOpen] = useState(false);
+  const [errors, setErrors] = useState<Partial<Record<'price' | 'lastFertilized' | 'lastWatered', string>>>({});
 
   const initialCategoryIds =
     Array.isArray(plant.categoryIds) && plant.categoryIds.length > 0
@@ -183,6 +184,10 @@ export function PlantDetailForm({
 
   const handleChange = (field: keyof PlantDetailFormValues, value: string) => {
     setValues((prev) => ({ ...prev, [field]: value }));
+
+    if (field === 'price') {
+      setErrors((prev) => ({ ...prev, price: undefined }));
+    }
   };
 
   const handleToggle = (field: keyof PlantDetailFormValues, value: boolean) => {
@@ -190,28 +195,49 @@ export function PlantDetailForm({
   };
 
   const handleSubmit = async () => {
+    const priceValidation = PlantPriceInputSchema.safeParse(values.price);
+    if (!priceValidation.success) {
+      const message =
+        priceValidation.error.issues[0]?.message ?? 'Precio inválido.';
+      setErrors((prev) => ({ ...prev, price: message }));
+      showToast({
+        kind: 'warning',
+        title: 'Aviso',
+        message,
+      });
+      return;
+    }
+
     const lastFertilizedInput = displayLastFertilized.trim();
     const lastWateredInput = displayLastWatered.trim();
 
     const fertilizedValidation = PlantCareDateInputSchema.safeParse(lastFertilizedInput);
     if (!fertilizedValidation.success) {
+      const message = fertilizedValidation.error.issues[0]?.message ?? 'Fecha inválida.';
+      setErrors((prev) => ({ ...prev, lastFertilized: message }));
       showToast({
         kind: 'warning',
         title: 'Aviso',
-        message: `Última fertilización: ${fertilizedValidation.error.issues[0]?.message ?? 'Fecha inválida.'}`,
+        message: `Última fertilización: ${message}`,
       });
       return;
     }
 
+    setErrors((prev) => ({ ...prev, lastFertilized: undefined }));
+
     const wateredValidation = PlantCareDateInputSchema.safeParse(lastWateredInput);
     if (!wateredValidation.success) {
+      const message = wateredValidation.error.issues[0]?.message ?? 'Fecha inválida.';
+      setErrors((prev) => ({ ...prev, lastWatered: message }));
       showToast({
         kind: 'warning',
         title: 'Aviso',
-        message: `Último riego: ${wateredValidation.error.issues[0]?.message ?? 'Fecha inválida.'}`,
+        message: `Último riego: ${message}`,
       });
       return;
     }
+
+    setErrors((prev) => ({ ...prev, lastWatered: undefined }));
 
     const nextLastFertilized = parseDisplayDateToIso(displayLastFertilized);
     const nextLastWatered = parseDisplayDateToIso(displayLastWatered);
@@ -237,6 +263,7 @@ export function PlantDetailForm({
 
     const normalized: PlantDetailFormValues = {
       ...values,
+      price: priceValidation.data,
       lastFertilized: nextLastFertilized === null ? values.lastFertilized : nextLastFertilized,
       lastWatered: nextLastWatered === null ? values.lastWatered : nextLastWatered,
     };
@@ -320,13 +347,27 @@ export function PlantDetailForm({
         <View style={formStyles.fieldHalf}>
           <Text style={formStyles.label}>Precio</Text>
           <TextInput
-            style={formStyles.input}
+            style={[
+              formStyles.input,
+              errors.price ? { borderColor: theme.colors.destructive } : null,
+            ]}
             value={values.price}
             onChangeText={(text) => handleChange('price', text)}
             keyboardType="numeric"
+            onBlur={() => {
+              const parsed = PlantPriceInputSchema.safeParse(values.price);
+              if (!parsed.success) {
+                const message = parsed.error.issues[0]?.message ?? 'Precio inválido.';
+                setErrors((prev) => ({ ...prev, price: message }));
+                return;
+              }
+              setErrors((prev) => ({ ...prev, price: undefined }));
+              setValues((prev) => ({ ...prev, price: parsed.data }));
+            }}
             placeholder='Ej. 15'
             placeholderTextColor={theme.colors.mutedForeground}
           />
+          {errors.price ? <Text style={formStyles.errorText}>{errors.price}</Text> : null}
         </View>
         <View style={formStyles.fieldHalf}>
           <Text style={formStyles.label}>Tóxica</Text>
@@ -555,42 +596,78 @@ export function PlantDetailForm({
         <View style={formStyles.fieldHalf}>
           <Text style={formStyles.label}>Última fertilización</Text>
           <TextInput
-            style={formStyles.input}
+            style={[
+              formStyles.input,
+              errors.lastFertilized ? { borderColor: theme.colors.destructive } : null,
+            ]}
             value={displayLastFertilized}
-            onChangeText={setDisplayLastFertilized}
+            onChangeText={(text) => {
+              setDisplayLastFertilized(text);
+              setErrors((prev) => ({ ...prev, lastFertilized: undefined }));
+            }}
             onBlur={() => {
+              const validation = PlantCareDateInputSchema.safeParse(displayLastFertilized.trim());
+              if (!validation.success) {
+                const message = validation.error.issues[0]?.message ?? 'Fecha inválida.';
+                setErrors((prev) => ({ ...prev, lastFertilized: message }));
+                return;
+              }
+
               const parsed = parseDisplayDateToIso(displayLastFertilized);
               if (parsed === null) {
-                setDisplayLastFertilized(formatIsoToDisplayDate(values.lastFertilized));
+                setErrors((prev) => ({
+                  ...prev,
+                  lastFertilized: 'Fecha inválida. Usá DD/MM/AAAA o YYYY-MM-DD.',
+                }));
                 return;
               }
               setValues((prev) => ({ ...prev, lastFertilized: parsed }));
               setDisplayLastFertilized(formatIsoToDisplayDate(parsed));
+              setErrors((prev) => ({ ...prev, lastFertilized: undefined }));
             }}
             placeholder="DD/MM/AAAA"
             placeholderTextColor={theme.colors.mutedForeground}
           />
+          {errors.lastFertilized ? <Text style={formStyles.errorText}>{errors.lastFertilized}</Text> : null}
         </View>
       </View>
 
       <View style={formStyles.fieldGroup}>
         <Text style={formStyles.label}>Último riego</Text>
         <TextInput
-          style={formStyles.input}
+          style={[
+            formStyles.input,
+            errors.lastWatered ? { borderColor: theme.colors.destructive } : null,
+          ]}
           value={displayLastWatered}
-          onChangeText={setDisplayLastWatered}
+          onChangeText={(text) => {
+            setDisplayLastWatered(text);
+            setErrors((prev) => ({ ...prev, lastWatered: undefined }));
+          }}
           onBlur={() => {
+            const validation = PlantCareDateInputSchema.safeParse(displayLastWatered.trim());
+            if (!validation.success) {
+              const message = validation.error.issues[0]?.message ?? 'Fecha inválida.';
+              setErrors((prev) => ({ ...prev, lastWatered: message }));
+              return;
+            }
+
             const parsed = parseDisplayDateToIso(displayLastWatered);
             if (parsed === null) {
-              setDisplayLastWatered(formatIsoToDisplayDate(values.lastWatered));
+              setErrors((prev) => ({
+                ...prev,
+                lastWatered: 'Fecha inválida. Usá DD/MM/AAAA o YYYY-MM-DD.',
+              }));
               return;
             }
             setValues((prev) => ({ ...prev, lastWatered: parsed }));
             setDisplayLastWatered(formatIsoToDisplayDate(parsed));
+            setErrors((prev) => ({ ...prev, lastWatered: undefined }));
           }}
           placeholder="DD/MM/AAAA"
           placeholderTextColor={theme.colors.mutedForeground}
         />
+        {errors.lastWatered ? <Text style={formStyles.errorText}>{errors.lastWatered}</Text> : null}
       </View>
 
       <View style={formStyles.fieldGroup}>
@@ -671,6 +748,12 @@ function createFormStyles(theme: AppTheme) {
       color: theme.colors.foreground,
       borderWidth: 1,
       borderColor: 'transparent',
+      fontFamily: theme.typography.fontFamily.default,
+    },
+    errorText: {
+      marginTop: theme.spacing.xs,
+      fontSize: theme.typography.size.sm,
+      color: theme.colors.destructive,
       fontFamily: theme.typography.fontFamily.default,
     },
     helperText: {
