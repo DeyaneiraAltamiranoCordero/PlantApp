@@ -2,6 +2,8 @@ import {
   getAuth,
   GoogleAuthProvider,
   onAuthStateChanged,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
   signInWithCredential,
   signOut as firebaseSignOut,
   type FirebaseAuthTypes,
@@ -24,6 +26,8 @@ interface AuthContextType {
   currentUser: FirebaseAuthTypes.User | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -118,6 +122,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 };
 
+  const signInWithEmail = async (email: string, password: string) => {
+    if (isWeb) {
+      throw new Error('El inicio de sesión con email y contraseña no está habilitado en Web con esta configuración.');
+    }
+
+    try {
+      const auth = getAuth();
+      await signInWithEmailAndPassword(auth, email.trim(), password);
+    } catch (error) {
+      console.error('Error en signInWithEmail:', error);
+      throw error;
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    if (isWeb) {
+      throw new Error('El restablecimiento de contraseña no está habilitado en Web con esta configuración.');
+    }
+
+    try {
+      const auth = getAuth();
+      await sendPasswordResetEmail(auth, email.trim());
+    } catch (error) {
+      console.error('Error al restablecer contraseña:', error);
+      throw error;
+    }
+  };
+
   const signOut = async () => {
     if (isWeb) {
       setCurrentUser(null);
@@ -135,7 +167,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, loading, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ currentUser, loading, signInWithGoogle, signInWithEmail, resetPassword, signOut }}>
       {children}
     </AuthContext.Provider>
   );

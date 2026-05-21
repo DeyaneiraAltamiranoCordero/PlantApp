@@ -4,7 +4,7 @@
     "slug": "PlantApp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/hojas.png",
+    "icon": "./assets/images/logoApp.png",
     "scheme": "com.plantapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
@@ -15,7 +15,7 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/hojas.png"
+        "foregroundImage": "./assets/images/logoApp.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -24,7 +24,7 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/hojas.png"
+      "favicon": "./assets/images/logoApp.png"
     },
     "plugins": [
       "@react-native-firebase/app",
@@ -49,7 +49,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/hojas.png",
+          "image": "./assets/images/logoApp.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
