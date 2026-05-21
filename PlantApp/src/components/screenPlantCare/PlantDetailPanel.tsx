@@ -455,6 +455,7 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
         fertilizerType: values.fertilizerType,
         lastFertilized: values.lastFertilized,
         lastWatered: values.lastWatered,
+        wateringIntervalDays: values.wateringIntervalDays ? Number(values.wateringIntervalDays) : null,
         careTypes,
         status: nextStatus,
       });

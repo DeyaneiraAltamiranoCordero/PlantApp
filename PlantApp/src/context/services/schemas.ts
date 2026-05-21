@@ -129,6 +129,36 @@ export const PlantSchema = z
     photo: z.string().nullable().optional(),
     notes: z.string().optional(),
     description: z.string().optional(),
+    wateringIntervalDays: z.number().int().positive().nullable().optional(),
+    nextWateringDate: z.string().nullable().optional(),
+  })
+  .passthrough();
+
+export const WateringReminderPlantSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    imageUrl: z.string().nullable().optional(),
+    categoryName: z.string().nullable().optional(),
+    lastWatered: z.string().nullable().optional(),
+    wateringIntervalDays: z.number().int().positive().nullable().optional(),
+    nextWateringDate: z.string().nullable().optional(),
+    isOverdue: z.boolean().optional(),
+  })
+  .passthrough();
+
+export const WateringReminderDaySchema = z
+  .object({
+    date: z.string(),
+    plants: z.array(WateringReminderPlantSchema),
+  })
+  .passthrough();
+
+export const WateringCalendarResponseSchema = z
+  .object({
+    month: z.string(),
+    days: z.array(WateringReminderDaySchema),
+    pendingPlants: z.array(WateringReminderPlantSchema),
   })
   .passthrough();
 

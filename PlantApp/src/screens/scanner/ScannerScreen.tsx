@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Alert, ActivityIndicator, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { CameraScanner } from '../../components/camera/CameraScanner';
-import { identifyPlant, IdentifyResult } from '../../context/services/api';
+import { identifyPlant, IdentifyResult, createPlant, CreatePlantPayload } from '../../context/services/api';
 import { useTheme } from '../../theme/desingSystem';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useAuth } from '../../context/AuthContext';
+import { usePlants } from '../../context/PlantContext';
 
 export default function ScannerScreen({ navigation }: any) {
     const { theme } = useTheme();
+    const { currentUser } = useAuth();
+    const { addPlant } = usePlants();
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [result, setResult] = useState<IdentifyResult | null>(null);
 
@@ -37,15 +41,14 @@ export default function ScannerScreen({ navigation }: any) {
     };
 
     const handleSave = async () => {
-        if (!result) return;
+        if (!result || !currentUser) return;
         
-        setIsAnalyzing(true); // Usamos el mismo estado de carga
+        setIsAnalyzing(true);
         try {
-            // 1. Preparamos el objeto para Firestore según tu PlantModel
-            const newPlant = {
+            const newPlant: CreatePlantPayload = {
                 name: result.name,
                 scientificName: result.scientific_name,
-                categoryId: "cat-general", // Categoría por defecto
+                categoryId: "cat-general", 
                 age: result.age || "0",
                 price: 0,
                 growthTime: result.growthTime || "N/A",
@@ -62,30 +65,20 @@ export default function ScannerScreen({ navigation }: any) {
                 description: result.description,
                 lastWatered: new Date().toISOString(),
                 lastFertilized: new Date().toISOString(),
-                imageUrl: "https://images.unsplash.com/photo-1545239351-ef35f43d514b?q=80&w=1000&auto=format&fit=crop", // Imagen temporal
-                userId: "usr-1", // Esto lo ideal es sacarlo de tu AuthContext
+                imageUrl: "https://images.unsplash.com/photo-1545239351-ef35f43d514b?q=80&w=1000&auto=format&fit=crop", 
+                userId: currentUser.uid,
                 careTypes: [],
                 pests: []
             };
 
-            // 2. Llamada al backend para guardar
             console.log("Guardando planta en el jardín...");
-            // Usamos la ruta genérica que ya tienes en el backend para crear documentos
-            const response = await fetch(`https://plantapp-7iyo.onrender.com/api/plants`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newPlant)
-            });
+            await addPlant(newPlant);
 
-            if (response.ok) {
-                Alert.alert(
-                    "¡Éxito!",
-                    `${result.name} ha sido añadida a tu jardín.`,
-                    [{ text: "Ir al inicio", onPress: () => navigation.navigate('Home') }]
-                );
-            } else {
-                throw new Error("Error al guardar en el servidor");
-            }
+            Alert.alert(
+                "¡Éxito!",
+                `${result.name} ha sido añadida a tu jardín.`,
+                [{ text: "Ir al jardín", onPress: () => navigation.navigate('PlantCare') }]
+            );
         } catch (error) {
             console.error("Error guardando planta:", error);
             Alert.alert("Error", "No pudimos guardar la planta en tu jardín.");

@@ -1,5 +1,7 @@
 """Endpoints REST que exponen datos Firestore."""
 
+from calendar import monthrange
+from datetime import date, datetime, timedelta
 from typing import Any, Literal, Sequence
 
 from fastapi import APIRouter, Body, HTTPException, Query
@@ -9,6 +11,7 @@ from .models import (
     FriendModel,
     PlantDetailResponse,
     PlantWithRelationsModel,
+    WateringCalendarResponse,
     UserModel,
     UserProfileResponse,
     IdentifyResponse,
@@ -112,6 +115,164 @@ def _get_user_friends(user_id: str) -> list[dict[str, Any]]:
     return list(merged.values())
 
 
+def _parse_date_value(raw_value: Any) -> date | None:
+    """Parse a stored date or ISO datetime string into a date object."""
+
+    if not isinstance(raw_value, str):
+        return None
+
+    cleaned = raw_value.strip()
+    if not cleaned:
+        return None
+
+    candidates = [cleaned, cleaned[:10]]
+    for candidate in candidates:
+        try:
+            return datetime.fromisoformat(candidate.replace("Z", "+00:00")).date()
+        except ValueError:
+            try:
+                return date.fromisoformat(candidate)
+            except ValueError:
+                continue
+    return None
+
+
+def _format_date_value(raw_value: date | None) -> str | None:
+    """Serialize a date value using the YYYY-MM-DD format."""
+
+    if raw_value is None:
+        return None
+    return raw_value.isoformat()
+
+
+def _normalize_watering_interval(raw_value: Any) -> int | None:
+    """Validate and convert the watering interval into a positive integer."""
+
+    if raw_value in (None, ""):
+        return None
+
+    if isinstance(raw_value, bool):
+        raise HTTPException(status_code=400, detail="La frecuencia de riego debe ser un número entero positivo.")
+
+    try:
+        interval = int(raw_value)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=400,
+            detail="La frecuencia de riego debe ser un número entero positivo.",
+        ) from exc
+
+    if interval < 1:
+        raise HTTPException(status_code=400, detail="La frecuencia de riego debe ser mayor que cero.")
+
+    return interval
+
+
+def _calculate_next_watering_date(last_watered: Any, watering_interval_days: Any) -> str | None:
+    """Derive the next watering date from the last watering and interval."""
+
+    interval = _normalize_watering_interval(watering_interval_days)
+    watered_on = _parse_date_value(last_watered)
+
+    if interval is None or watered_on is None:
+        return None
+
+    next_date = watered_on + timedelta(days=interval)
+    return _format_date_value(next_date)
+
+
+def _prepare_plant_payload(payload: dict[str, Any], *, merge: bool, existing: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Normalize reminder fields before persisting a plant document."""
+
+    merged_payload = (existing or {}).copy() if merge else {}
+    merged_payload.update(payload)
+
+    normalized_payload = payload.copy()
+
+    if "wateringIntervalDays" in merged_payload:
+        normalized_payload["wateringIntervalDays"] = _normalize_watering_interval(
+            merged_payload.get("wateringIntervalDays")
+        )
+
+    if "lastWatered" in merged_payload:
+        normalized_payload["nextWateringDate"] = _calculate_next_watering_date(
+            merged_payload.get("lastWatered"),
+            merged_payload.get("wateringIntervalDays"),
+        )
+
+    return normalized_payload
+
+
+def _decorate_plant_for_reminders(plant: dict[str, Any], *, today: date | None = None) -> dict[str, Any]:
+    """Add derived reminder fields to a plant document copy."""
+
+    plant_copy = plant.copy()
+    next_watering_date = _calculate_next_watering_date(
+        plant_copy.get("lastWatered"),
+        plant_copy.get("wateringIntervalDays"),
+    )
+    plant_copy["nextWateringDate"] = next_watering_date
+    plant_copy["wateringIntervalDays"] = _normalize_watering_interval(
+        plant_copy.get("wateringIntervalDays")
+    )
+
+    due_date = _parse_date_value(next_watering_date)
+    if today is None:
+        today = date.today()
+    plant_copy["isOverdue"] = bool(due_date and due_date <= today)
+    return plant_copy
+
+
+def _build_watering_calendar(plants: list[dict[str, Any]], month_key: str) -> dict[str, Any]:
+    """Group watering reminders by date for a given month."""
+
+    year_str, month_str = month_key.split("-", maxsplit=1)
+    year = int(year_str)
+    month = int(month_str)
+    _, last_day = monthrange(year, month)
+
+    month_start = date(year, month, 1)
+    month_end = date(year, month, last_day)
+    today = date.today()
+
+    reminders_by_date: dict[str, list[dict[str, Any]]] = {}
+    pending_plants: list[dict[str, Any]] = []
+
+    for plant in plants:
+        decorated = _decorate_plant_for_reminders(plant, today=today)
+        due_date = _parse_date_value(decorated.get("nextWateringDate"))
+        if due_date is None:
+            continue
+
+        if month_start <= due_date <= month_end:
+            reminders_by_date.setdefault(_format_date_value(due_date) or "", []).append(decorated)
+
+        if due_date <= today:
+            pending_plants.append(decorated)
+
+    days: list[dict[str, Any]] = []
+    for current_day in range(1, last_day + 1):
+        day_date = date(year, month, current_day)
+        day_key = _format_date_value(day_date) or ""
+        day_plants = reminders_by_date.get(day_key, [])
+        if not day_plants:
+            continue
+        days.append({"date": day_key, "plants": day_plants})
+
+    pending_plants.sort(
+        key=lambda item: (
+            item.get("nextWateringDate") or "9999-12-31",
+            item.get("name") or "",
+        )
+    )
+
+    return {
+        "month": month_key,
+        "days": days,
+        "pendingPlants": pending_plants,
+    }
+
+
 def _populate_plants_with_relations(plants: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Attach category, care types and pests to every plant document."""
 
@@ -156,6 +317,13 @@ def _populate_plants_with_relations(plants: list[dict[str, Any]]) -> list[dict[s
         plant_copy["careTypes"] = care_type_refs
         plant_copy["pests"] = pest_refs
         plant_copy["category"] = category_map.get(plant_copy.get("categoryId"))
+        plant_copy["wateringIntervalDays"] = _normalize_watering_interval(
+            plant_copy.get("wateringIntervalDays")
+        )
+        plant_copy["nextWateringDate"] = _calculate_next_watering_date(
+            plant_copy.get("lastWatered"),
+            plant_copy.get("wateringIntervalDays"),
+        )
 
         enriched.append(plant_copy)
 
@@ -212,6 +380,32 @@ def read_user_plants(user_id: str) -> list[dict[str, Any]]:
     return _populate_plants_with_relations(plants)
 
 
+@router.get("/api/users/{user_id}/watering-calendar", response_model=WateringCalendarResponse)
+def read_user_watering_calendar(user_id: str, month: str | None = Query(default=None)) -> dict[str, Any]:
+    """Return the watering reminders for a given month."""
+
+    if month is None:
+        month = date.today().strftime("%Y-%m")
+
+    if not month or not isinstance(month, str):
+        raise HTTPException(status_code=400, detail="Debes enviar el mes con formato YYYY-MM.")
+
+    if not month or len(month) != 7 or month[4] != "-":
+        raise HTTPException(status_code=400, detail="Debes enviar el mes con formato YYYY-MM.")
+
+    try:
+        year = int(month[:4])
+        month_number = int(month[5:])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Debes enviar el mes con formato YYYY-MM.") from exc
+
+    if year < 1 or month_number < 1 or month_number > 12:
+        raise HTTPException(status_code=400, detail="Debes enviar el mes con formato YYYY-MM.")
+
+    plants = get_collection("plants", filters=[("userId", "==", user_id)])
+    return _build_watering_calendar(plants, month)
+
+
 @router.get("/api/plants/{plant_id}/details", response_model=PlantDetailResponse)
 def read_plant_detail(plant_id: str) -> dict[str, Any]:
     """Return one plant together with care types and pests."""
@@ -240,7 +434,10 @@ async def identify_plant_endpoint(payload: dict[str, Any] = Body(..., embed=Fals
         images = [single_image]
         
     if not images:
-        raise HTTPException(status_code=400, detail="Se requiere al menos una imagen para el análisis.")
+            raise HTTPException(
+                status_code=400,
+                detail="Se requiere al menos una imagen para el análisis.",
+            )
     
     # Ahora llamamos con await porque la función es async
     return await identify_plant_mock(images)
@@ -271,6 +468,8 @@ def create_collection_document(
 
     body = payload.copy()
     document_id = body.pop("id", None)
+    if collection_name == "plants":
+        body = _prepare_plant_payload(body, merge=False)
     return create_document(collection_name, body, document_id=document_id)
 
 
@@ -295,7 +494,10 @@ def replace_collection_document(
 ) -> dict[str, Any]:
     """Replace a document entirely (no merge)."""
 
-    return update_document(collection_name, document_id, payload, merge=False)
+    body = payload.copy()
+    if collection_name == "plants":
+        body = _prepare_plant_payload(body, merge=False)
+    return update_document(collection_name, document_id, body, merge=False)
 
 
 @router.patch(
@@ -309,7 +511,11 @@ def patch_collection_document(
 ) -> dict[str, Any]:
     """Apply a partial update to a document (merge semantics)."""
 
-    return update_document(collection_name, document_id, payload, merge=True)
+    body = payload.copy()
+    if collection_name == "plants":
+        existing = get_document(collection_name, document_id)
+        body = _prepare_plant_payload(body, merge=True, existing=existing)
+    return update_document(collection_name, document_id, body, merge=True)
 
 
 @router.delete(

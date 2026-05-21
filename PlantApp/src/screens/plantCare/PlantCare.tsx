@@ -7,6 +7,7 @@ import { usePlantCareStyles } from './PlantCare.style';
 import { PlantCard } from '../../components/screenPlantCare/PlantCard';
 import { PlantDetailPanel } from '../../components/screenPlantCare/PlantDetailPanel';
 import { PlantTabs } from '../../components/screenPlantCare/PlantTabs';
+import { usePlants } from '../../context/PlantContext';
 
 type PlantTab = 'all' | 'favorites' | 'sick';
 
@@ -20,51 +21,29 @@ export default function PlantCareScreen() {
   const { currentUser } = useAuth();
   const { styles, theme } = usePlantCareStyles();
   const { showToast } = useToast();
-  const [plants, setPlants] = useState<Plant[]>([]);
+  const { plants, isLoading, loadPlants, updatePlantLocal } = usePlants();
   const [activeTab, setActiveTab] = useState<PlantTab>('all');
-  const [isLoading, setIsLoading] = useState(false);
   const [selectedPlant, setSelectedPlant] = useState<Plant | null>(null);
   const [togglingFavoriteIds, setTogglingFavoriteIds] = useState<string[]>([]);
 
-  const loadPlants = async (options?: { showToastOnSuccess?: boolean }) => {
-    if (!currentUser) return;
+  const handleLoadPlants = async (options?: { showToastOnSuccess?: boolean }) => {
     try {
-      setIsLoading(true);
-      const response = await getUserPlants(currentUser.uid);
-      setPlants(response);
-
+      await loadPlants();
       if (options?.showToastOnSuccess) {
-        if (response.length === 0) {
-          showToast({
-            kind: 'warning',
-            title: 'Aviso',
-            message: 'No tenés plantas registradas todavía.',
-          });
-        } else {
-          showToast({
-            kind: 'success',
-            title: 'Listo',
-            message: 'Actualizamos tu lista de plantas.',
-          });
-        }
+        showToast({
+          kind: 'success',
+          title: 'Listo',
+          message: 'Actualizamos tu lista de plantas.',
+        });
       }
     } catch (error) {
       console.error('Error al obtener plantas', error);
-      const message =
-        error instanceof ApiValidationError
-          ? 'La API devolvió datos inválidos. Intentá nuevamente.'
-          : error instanceof ApiError
-            ? error.message
-            : 'No pudimos cargar tus plantas.';
-
-      showToast({ kind: 'error', title: 'Error', message });
-    } finally {
-      setIsLoading(false);
+      showToast({ kind: 'error', title: 'Error', message: 'No pudimos cargar tus plantas.' });
     }
   };
 
   useEffect(() => {
-    loadPlants();
+    handleLoadPlants();
     if (currentUser) {
       // Prefetch catalogs once so "Agregar" flows have data ready.
       void prefetchPlantCatalogs();
@@ -99,7 +78,7 @@ export default function PlantCareScreen() {
   };
 
   const handlePlantUpdated = (updated: Plant) => {
-    setPlants((prev) => prev.map((plant) => (plant.id === updated.id ? updated : plant)));
+    updatePlantLocal(updated);
     setSelectedPlant(updated);
   };
 
@@ -111,21 +90,21 @@ export default function PlantCareScreen() {
     setTogglingFavoriteIds((prev) => [...prev, plant.id]);
 
     // Optimistic update
-    setPlants((prev) => prev.map((p) => (p.id === plant.id ? { ...p, isFavorite: nextIsFavorite } : p)));
+    updatePlantLocal({ ...plant, isFavorite: nextIsFavorite });
     if (selectedPlant?.id === plant.id) {
       setSelectedPlant({ ...selectedPlant, isFavorite: nextIsFavorite });
     }
 
     try {
       const updated = await updatePlant(plant.id, { isFavorite: nextIsFavorite });
-      setPlants((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+      updatePlantLocal(updated);
       if (selectedPlant?.id === updated.id) {
         setSelectedPlant(updated);
       }
     } catch (error) {
       console.error('Error actualizando favorito', error);
       // rollback
-      setPlants((prev) => prev.map((p) => (p.id === plant.id ? { ...p, isFavorite: Boolean(plant.isFavorite) } : p)));
+      updatePlantLocal({ ...plant, isFavorite: Boolean(plant.isFavorite) });
       if (selectedPlant?.id === plant.id) {
         setSelectedPlant({ ...selectedPlant, isFavorite: Boolean(plant.isFavorite) });
       }
@@ -172,7 +151,7 @@ export default function PlantCareScreen() {
         )}
         ListHeaderComponent={renderHeader}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 140 }]}
-        onRefresh={() => loadPlants({ showToastOnSuccess: true })}
+        onRefresh={() => handleLoadPlants({ showToastOnSuccess: true })}
         refreshing={isLoading}
         ListEmptyComponent={
           !isLoading ? (

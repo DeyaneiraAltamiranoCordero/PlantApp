@@ -84,6 +84,7 @@ export type PlantDetailFormValues = {
   fertilizerType: string;
   lastFertilized: string;
   lastWatered: string;
+  wateringIntervalDays: string;
   careTypes: string;
 };
 
@@ -113,7 +114,7 @@ export function PlantDetailForm({
   const formStyles = useMemo(() => createFormStyles(theme), [theme]);
   const [isCategoryPickerVisible, setIsCategoryPickerVisible] = useState(false);
   const [isCategorySelectOpen, setIsCategorySelectOpen] = useState(false);
-  const [errors, setErrors] = useState<Partial<Record<'price' | 'lastFertilized' | 'lastWatered', string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<'price' | 'lastFertilized' | 'lastWatered' | 'wateringIntervalDays', string>>>({});
 
   const initialCategoryIds =
     Array.isArray(plant.categoryIds) && plant.categoryIds.length > 0
@@ -148,6 +149,10 @@ export function PlantDetailForm({
     fertilizerType: plant.fertilizerType || '',
     lastFertilized: plant.lastFertilized || '',
     lastWatered: plant.lastWatered || '',
+    wateringIntervalDays:
+      typeof plant.wateringIntervalDays === 'number' && Number.isFinite(plant.wateringIntervalDays)
+        ? String(plant.wateringIntervalDays)
+        : '',
     careTypes: initialCareTypeIds.join(', '),
   });
 
@@ -261,11 +266,46 @@ export function PlantDetailForm({
       return;
     }
 
+    const wateringIntervalInput = values.wateringIntervalDays.trim();
+    let wateringIntervalDays: number | undefined;
+    if (wateringIntervalInput) {
+      if (!/^\d+$/.test(wateringIntervalInput)) {
+        setErrors((prev) => ({
+          ...prev,
+          wateringIntervalDays: 'Usá un número entero positivo.',
+        }));
+        showToast({
+          kind: 'warning',
+          title: 'Aviso',
+          message: 'La frecuencia de riego debe ser un número entero positivo.',
+        });
+        return;
+      }
+
+      wateringIntervalDays = Number(wateringIntervalInput);
+      if (!Number.isFinite(wateringIntervalDays) || wateringIntervalDays < 1) {
+        setErrors((prev) => ({
+          ...prev,
+          wateringIntervalDays: 'Usá un número entero positivo.',
+        }));
+        showToast({
+          kind: 'warning',
+          title: 'Aviso',
+          message: 'La frecuencia de riego debe ser mayor que cero.',
+        });
+        return;
+      }
+    }
+
+    setErrors((prev) => ({ ...prev, wateringIntervalDays: undefined }));
+
     const normalized: PlantDetailFormValues = {
       ...values,
       price: priceValidation.data,
       lastFertilized: nextLastFertilized === null ? values.lastFertilized : nextLastFertilized,
       lastWatered: nextLastWatered === null ? values.lastWatered : nextLastWatered,
+      wateringIntervalDays:
+        typeof wateringIntervalDays === 'number' ? String(wateringIntervalDays) : '',
     };
 
     setValues(normalized);
@@ -668,6 +708,46 @@ export function PlantDetailForm({
           placeholderTextColor={theme.colors.mutedForeground}
         />
         {errors.lastWatered ? <Text style={formStyles.errorText}>{errors.lastWatered}</Text> : null}
+      </View>
+
+      <View style={formStyles.fieldGroup}>
+        <Text style={formStyles.label}>Frecuencia de riego</Text>
+        <TextInput
+          style={[
+            formStyles.input,
+            errors.wateringIntervalDays ? { borderColor: theme.colors.destructive } : null,
+          ]}
+          value={values.wateringIntervalDays}
+          onChangeText={(text) => {
+            setValues((prev) => ({ ...prev, wateringIntervalDays: text }));
+            setErrors((prev) => ({ ...prev, wateringIntervalDays: undefined }));
+          }}
+          onBlur={() => {
+            const trimmed = values.wateringIntervalDays.trim();
+            if (!trimmed) {
+              setErrors((prev) => ({ ...prev, wateringIntervalDays: undefined }));
+              return;
+            }
+
+            if (!/^\d+$/.test(trimmed) || Number(trimmed) < 1) {
+              setErrors((prev) => ({
+                ...prev,
+                wateringIntervalDays: 'Usá un número entero positivo.',
+              }));
+              return;
+            }
+
+            setValues((prev) => ({ ...prev, wateringIntervalDays: String(Number(trimmed)) }));
+            setErrors((prev) => ({ ...prev, wateringIntervalDays: undefined }));
+          }}
+          keyboardType="number-pad"
+          placeholder="Ej. 7"
+          placeholderTextColor={theme.colors.mutedForeground}
+        />
+        <Text style={formStyles.helperText}>Cada cuántos días se debe regar esta planta.</Text>
+        {errors.wateringIntervalDays ? (
+          <Text style={formStyles.errorText}>{errors.wateringIntervalDays}</Text>
+        ) : null}
       </View>
 
       <View style={formStyles.fieldGroup}>

@@ -58,18 +58,23 @@ const CameraTabButton = () => {
     return (
         <Pressable
             onPress={handlePress}
+            accessibilityRole="button"
+            accessibilityLabel="Abrir cámara"
             style={({ pressed }) => ({
+                flex: 1,
+                alignItems: 'center',
+                justifyContent: 'center',
                 opacity: pressed ? 0.7 : 1,
             })}
         >
             <View style={{
-                top: -15,
+                top: -8,
                 justifyContent: 'center',
                 alignItems: 'center',
                 backgroundColor: theme.colors.primary,
-                width: 60,
-                height: 60,
-                borderRadius: 30,
+                width: 64,
+                height: 64,
+                borderRadius: 32,
                 elevation: 5,
                 shadowColor: theme.colors.primary,
                 shadowOffset: { width: 0, height: 4 },
@@ -91,7 +96,12 @@ export default function TabNavigator() {
         <Tab.Navigator
             screenOptions={({ route }) => ({
                 headerShown: false,
-                tabBarShowLabel: false,
+                tabBarShowLabel: true,
+                tabBarLabelStyle: {
+                    fontSize: theme.typography.size.sm,
+                    fontFamily: theme.typography.fontFamily.semibold,
+                    marginBottom: 2,
+                },
                 tabBarActiveTintColor: theme.colors.tertiary,
                 tabBarInactiveTintColor: theme.colors.mutedForeground,
                 tabBarStyle: route.name === 'Scanner'
@@ -105,15 +115,23 @@ export default function TabNavigator() {
                         borderTopWidth: 0,
                         elevation: 8,
                         zIndex: 100,
+                        height: 70,
+                        paddingTop: 8,
+                        paddingBottom: 8,
                     },
+                tabBarItemStyle: {
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                },
             })}
         >
             <Tab.Screen
                 name="Home"
                 component={HomeScreen}
                 options={{
+                    tabBarLabel: 'Inicio',
                     tabBarIcon: ({ color, size }) => (
-                        <MaterialCommunityIcons name="home-variant" size={size} color={color} />
+                        <MaterialCommunityIcons name="home-variant-outline" size={size} color={color} />
                     ),
                 }}
             />
@@ -121,8 +139,9 @@ export default function TabNavigator() {
                 name="PlantCare"
                 component={PlantCareScreen}
                 options={{
+                    tabBarLabel: 'Plantas',
                     tabBarIcon: ({ color, size }) => (
-                        <MaterialCommunityIcons name="sprout" size={size} color={color} />
+                        <MaterialCommunityIcons name="leaf" size={size} color={color} />
                     ),
                 }}
             />
@@ -130,6 +149,7 @@ export default function TabNavigator() {
                 name="Scanner"
                 component={ScannerScreen}
                 options={{
+                    tabBarLabel: '',
                     tabBarButton: () => <CameraTabButton />,
                 }}
             />
@@ -137,8 +157,9 @@ export default function TabNavigator() {
                 name="Friends"
                 component={FriendsScreen}
                 options={{
+                    tabBarLabel: 'Amigos',
                     tabBarIcon: ({ color, size }) => (
-                        <MaterialCommunityIcons name="account-group" size={size} color={color} />
+                        <MaterialCommunityIcons name="account-group-outline" size={size} color={color} />
                     ),
                 }}
             />
@@ -146,8 +167,9 @@ export default function TabNavigator() {
                 name="Profile"
                 component={ProfileScreen}
                 options={{
+                    tabBarLabel: 'Perfil',
                     tabBarIcon: ({ color, size }) => (
-                        <MaterialCommunityIcons name="account" size={size} color={color} />
+                        <MaterialCommunityIcons name="account-circle-outline" size={size} color={color} />
                     ),
                 }}
             />

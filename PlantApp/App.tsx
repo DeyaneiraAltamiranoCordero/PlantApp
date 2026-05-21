@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
 
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
+import { PlantProvider } from './src/context/PlantContext';
 import { ToastProvider } from './src/context/ToastContext';
 import TabNavigator from "./src/navegation/barNavegation";
 import LoginScreen from './src/screens/login/Login';
@@ -28,21 +29,28 @@ function Navigation() {
   });
 
   const loading = authLoading || !fontsLoaded;
+  
+  console.log('[App] State:', { authLoading, fontsLoaded, loading });
 
   React.useEffect(() => {
+    console.log('[App] useEffect - loading changed:', loading);
     if (!loading) {
-      SplashScreen.hideAsync().catch(() => {});
+      console.log('[App] Hiding SplashScreen');
+      SplashScreen.hideAsync().catch((err) => console.error('[App] SplashScreen error:', err));
     }
   }, [loading]);
 
   if (loading) {
+    console.log('[App] Rendering Loading Screen');
     return (
       <View style={{ flex: 1, backgroundColor: '#ffffff', justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#2D5A27" />
-        <Text style={{ marginTop: 10 }}>Cargando...</Text>
+        <Text style={{ marginTop: 10 }}>Cargando... (Auth: {String(authLoading)}, Fonts: {String(fontsLoaded)})</Text>
       </View>
     );
   }
+
+  console.log('[App] Rendering Navigation Container');
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
@@ -68,7 +76,9 @@ export default function App() {
       <ThemeProvider>
         <ToastProvider>
           <AuthProvider>
-            <Navigation />
+            <PlantProvider>
+              <Navigation />
+            </PlantProvider>
           </AuthProvider>
         </ToastProvider>
       </ThemeProvider>

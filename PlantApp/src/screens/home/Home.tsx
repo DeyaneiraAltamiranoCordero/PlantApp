@@ -1,11 +1,166 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
-import { getUserProfile } from '../../context/services/api';
+import {
+  getUserProfile,
+  WateringReminderPlant,
+} from '../../context/services/api';
 import { useTheme } from '../../theme/desingSystem';
 import { createHomeStyles } from './Home.styles';
+
+const MONTH_NAMES = [
+  'enero',
+  'febrero',
+  'marzo',
+  'abril',
+  'mayo',
+  'junio',
+  'julio',
+  'agosto',
+  'septiembre',
+  'octubre',
+  'noviembre',
+  'diciembre',
+];
+
+const WEEK_DAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+
+const pad2 = (value: number) => String(value).padStart(2, '0');
+
+const todayIso = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+};
+
+const monthKeyForToday = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}`;
+};
+
+const formatMonthLabel = (monthKey: string) => {
+  const [yearRaw, monthRaw] = monthKey.split('-');
+  const monthIndex = Number(monthRaw) - 1;
+  return `${MONTH_NAMES[monthIndex] ?? monthRaw} ${yearRaw}`;
+};
+
+const formatLongDate = (isoDate: string) => {
+  const [yearRaw, monthRaw, dayRaw] = isoDate.split('-');
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  const day = Number(dayRaw);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+    return isoDate;
+  }
+  return `${day} de ${MONTH_NAMES[month - 1] ?? monthRaw} de ${year}`;
+};
+
+const buildMonthGrid = (monthKey: string) => {
+  const [yearRaw, monthRaw] = monthKey.split('-');
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  if (!Number.isFinite(year) || !Number.isFinite(month)) {
+    return [] as Array<{ date: string; day: number }>;
+  }
+
+  const firstDay = new Date(year, month - 1, 1);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const leadingBlanks = (firstDay.getDay() + 6) % 7;
+
+  const cells: Array<{ date: string; day: number } | null> = [];
+  for (let index = 0; index < leadingBlanks; index += 1) {
+    cells.push(null);
+  }
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    cells.push({
+      day,
+      date: `${year}-${pad2(month)}-${pad2(day)}`,
+    });
+  }
+
+  return cells;
+};
+
+const sortByDate = (items: WateringReminderPlant[]) =>
+  [...items].sort((left, right) => {
+    const leftDate = left.nextWateringDate ?? '9999-12-31';
+    const rightDate = right.nextWateringDate ?? '9999-12-31';
+    return leftDate.localeCompare(rightDate) || left.name.localeCompare(right.name);
+  });
+
+const deriveReminderPlant = (plant: Record<string, unknown>): WateringReminderPlant | null => {
+  const id = typeof plant.id === 'string' ? plant.id : '';
+  const name = typeof plant.name === 'string' ? plant.name : '';
+  if (!id || !name) return null;
+
+  const wateringIntervalDays =
+    typeof plant.wateringIntervalDays === 'number'
+      ? plant.wateringIntervalDays
+      : typeof plant.wateringIntervalDays === 'string'
+        ? Number(plant.wateringIntervalDays)
+        : null;
+
+  const nextWateringDate =
+    typeof plant.nextWateringDate === 'string'
+      ? plant.nextWateringDate
+      : typeof plant.lastWatered === 'string' && Number.isFinite(wateringIntervalDays ?? NaN)
+        ? (() => {
+            const wateredOn = new Date(plant.lastWatered as string);
+            if (Number.isNaN(wateredOn.getTime())) return null;
+            wateredOn.setUTCDate(wateredOn.getUTCDate() + Number(wateringIntervalDays));
+            return wateredOn.toISOString().slice(0, 10);
+          })()
+        : null;
+
+  return {
+    id,
+    name,
+    imageUrl: typeof plant.imageUrl === 'string' ? plant.imageUrl : null,
+    categoryName: typeof plant.categoryName === 'string' ? plant.categoryName : null,
+    lastWatered: typeof plant.lastWatered === 'string' ? plant.lastWatered : null,
+    wateringIntervalDays: Number.isFinite(wateringIntervalDays ?? NaN) ? Number(wateringIntervalDays) : null,
+    nextWateringDate,
+    isOverdue: Boolean(nextWateringDate && nextWateringDate <= todayIso()),
+  };
+};
+
+const buildFallbackCalendar = (plants: Array<Record<string, unknown>>, monthKey: string) => {
+  const [yearRaw, monthRaw] = monthKey.split('-');
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  const monthStart = `${monthKey}-01`;
+  const monthEndDay = new Date(year, month, 0).getDate();
+  const monthEnd = `${monthKey}-${pad2(monthEndDay)}`;
+
+  const reminders = plants.map(deriveReminderPlant).filter((item): item is WateringReminderPlant => Boolean(item));
+  const daysMap = new Map<string, WateringReminderPlant[]>();
+  const pendingPlants: WateringReminderPlant[] = [];
+
+  reminders.forEach((plant) => {
+    const dueDate = plant.nextWateringDate;
+    if (!dueDate) return;
+
+    if (dueDate >= monthStart && dueDate <= monthEnd) {
+      const current = daysMap.get(dueDate) ?? [];
+      current.push(plant);
+      daysMap.set(dueDate, current);
+    }
+
+    if (dueDate <= todayIso()) {
+      pendingPlants.push(plant);
+    }
+  });
+
+  return {
+    month: monthKey,
+    days: Array.from(daysMap.entries())
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([date, plantsForDay]) => ({ date, plants: sortByDate(plantsForDay) })),
+    pendingPlants: sortByDate(pendingPlants),
+  };
+};
 
 export default function HomeScreen() {
   const { currentUser } = useAuth();
@@ -13,13 +168,23 @@ export default function HomeScreen() {
   const styles = useMemo(() => createHomeStyles(theme), [theme]);
 
   const [isLoading, setIsLoading] = useState(false);
+  const [calendar, setCalendar] = useState<ReturnType<typeof buildFallbackCalendar> | null>(null);
+  const [selectedDate, setSelectedDate] = useState(todayIso());
 
-  const uniqueStrings = (items: Array<string | undefined | null>) => {
-    const normalized = items
-      .map((item) => item?.trim())
-      .filter((item): item is string => Boolean(item));
-    return Array.from(new Set(normalized));
-  };
+  const monthKey = useMemo(() => monthKeyForToday(), []);
+
+  const calendarByDate = useMemo(() => {
+    const mapping = new Map<string, WateringReminderPlant[]>();
+    calendar?.days.forEach((day) => {
+      mapping.set(day.date, sortByDate(day.plants));
+    });
+    return mapping;
+  }, [calendar]);
+
+  const selectedDayPlants = useMemo(() => calendarByDate.get(selectedDate) ?? [], [calendarByDate, selectedDate]);
+  const pendingPlants = useMemo(() => sortByDate(calendar?.pendingPlants ?? []), [calendar?.pendingPlants]);
+  const monthGrid = useMemo(() => buildMonthGrid(monthKey), [monthKey]);
+  const monthLabel = useMemo(() => formatMonthLabel(monthKey), [monthKey]);
 
   const displayName = useMemo(() => {
     const fromAuth = currentUser?.displayName?.trim();
@@ -33,15 +198,14 @@ export default function HomeScreen() {
     if (showLoading) setIsLoading(true);
 
     try {
-      // Home now only needs minimal info if any, but we'll keep the call
-      // or remove it if not needed. Since we removed the states, we can remove the logic.
-      await getUserProfile(currentUser.uid);
+      const profile = await getUserProfile(currentUser.uid);
+      setCalendar(buildFallbackCalendar(profile.plants as Array<Record<string, unknown>>, monthKey));
     } catch (error) {
       console.error('Error al cargar resumen:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser]);
+  }, [currentUser, monthKey]);
 
   useFocusEffect(
     useCallback(() => {
@@ -66,35 +230,132 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <Text style={styles.greeting}>Hola,</Text>
         <Text style={styles.userName}>{displayName}</Text>
+        <Text style={styles.sectionSubtitle}>Calendario mensual de riegos</Text>
       </View>
 
-      <View style={styles.searchContainer}>
-        <View style={styles.searchInputWrapper}>
-          <Feather
-            name="search"
-            size={18}
-            color={theme.colors.mutedForeground}
-            style={styles.searchIcon}
-          />
-          <TextInput
-            placeholder="Buscar"
-            placeholderTextColor={theme.colors.mutedForeground}
-            style={styles.searchInput}
-            returnKeyType="search"
-          />
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <View>
+            <Text style={styles.sectionTitle}>{monthLabel}</Text>
+            <Text style={styles.sectionSubtitle}>Tocá un día para ver qué plantas necesitan riego.</Text>
+          </View>
+          <View style={styles.calendarBadge}>
+            <Feather name="droplet" size={16} color={theme.colors.primary} />
+            <Text style={styles.calendarBadgeText}>{calendar?.days.length ?? 0}</Text>
+          </View>
         </View>
-      </View>
 
-      <View style={{ paddingHorizontal: theme.spacing.xl }}>
         {isLoading ? (
-          <View style={{ paddingVertical: theme.spacing.xl }}>
+          <View style={styles.loadingCard}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
           </View>
         ) : (
-          <View style={{ paddingVertical: theme.spacing.xl }}>
-             <Text style={{ color: theme.colors.mutedForeground, textAlign: 'center' }}>
-                Explora y cuida tus plantas favoritas.
-             </Text>
+          <View style={styles.calendarCard}>
+            <View style={styles.weekRow}>
+              {WEEK_DAYS.map((day, index) => (
+                <Text key={`${day}-${index}`} style={styles.weekDayLabel}>
+                  {day}
+                </Text>
+              ))}
+            </View>
+
+            <View style={styles.calendarGrid}>
+              {monthGrid.map((cell, index) => {
+                if (!cell) {
+                  return <View key={`blank-${index}`} style={styles.calendarCellBlank} />;
+                }
+
+                const plants = calendarByDate.get(cell.date) ?? [];
+                const isSelected = selectedDate === cell.date;
+                const hasWatering = plants.length > 0;
+                const isToday = cell.date === todayIso();
+
+                return (
+                  <TouchableOpacity
+                    key={cell.date}
+                    style={[
+                      styles.calendarCell,
+                      isSelected && styles.calendarCellSelected,
+                      isToday && !isSelected ? styles.calendarCellToday : null,
+                    ]}
+                    onPress={() => setSelectedDate(cell.date)}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={[styles.calendarDayNumber, isSelected && styles.calendarDayNumberSelected]}>
+                      {cell.day}
+                    </Text>
+                    {hasWatering ? <View style={styles.calendarDot} /> : <View style={styles.calendarDotPlaceholder} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <View>
+            <Text style={styles.sectionTitle}>Riegos del día</Text>
+            <Text style={styles.sectionSubtitle}>{formatLongDate(selectedDate)}</Text>
+          </View>
+        </View>
+
+        {selectedDayPlants.length > 0 ? (
+          <View style={styles.listStack}>
+            {selectedDayPlants.map((plant) => (
+              <View key={plant.id} style={styles.reminderCard}>
+                <View style={styles.reminderIconWrap}>
+                  <Feather name="droplet" size={18} color={theme.colors.primary} />
+                </View>
+                <View style={styles.reminderContent}>
+                  <Text style={styles.reminderTitle}>{plant.name}</Text>
+                  <Text style={styles.reminderSubtitle}>
+                    {plant.categoryName || 'Sin categoría'}
+                    {plant.wateringIntervalDays ? ` · cada ${plant.wateringIntervalDays} días` : ''}
+                  </Text>
+                  {plant.nextWateringDate ? (
+                    <Text style={styles.reminderMeta}>Siguiente riego: {formatLongDate(plant.nextWateringDate)}</Text>
+                  ) : null}
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>No hay riegos programados para este día.</Text>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <View>
+            <Text style={styles.sectionTitle}>Pendientes de riego</Text>
+            <Text style={styles.sectionSubtitle}>Plantas que ya necesitan agua.</Text>
+          </View>
+        </View>
+
+        {pendingPlants.length > 0 ? (
+          <View style={styles.listStack}>
+            {pendingPlants.map((plant) => (
+              <View key={plant.id} style={styles.pendingCard}>
+                <View style={styles.pendingHeader}>
+                  <Text style={styles.reminderTitle}>{plant.name}</Text>
+                  {plant.isOverdue ? <Text style={styles.overdueChip}>Atrasada</Text> : null}
+                </View>
+                <Text style={styles.reminderSubtitle}>{plant.categoryName || 'Sin categoría'}</Text>
+                <Text style={styles.reminderMeta}>
+                  {plant.nextWateringDate
+                    ? `Debía regarse: ${formatLongDate(plant.nextWateringDate)}`
+                    : 'Sin próxima fecha de riego'}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>No tienes plantas pendientes de riego por ahora.</Text>
           </View>
         )}
       </View>

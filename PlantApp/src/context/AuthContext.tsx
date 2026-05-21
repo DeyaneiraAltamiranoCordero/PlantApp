@@ -69,23 +69,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    console.log('[AuthContext] Setting up onAuthStateChanged');
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log('[AuthContext] onAuthStateChanged fired. User:', user ? user.uid : 'null');
       try {
         if (user) {
           // Don't block initial render on API sync (backend may be offline/unreachable).
           setCurrentUser(user);
           void syncUserToApi(user).catch((error) => {
-            console.error('Error sincronizando usuario con la API:', error);
+            console.error('[AuthContext] Error sincronizando usuario con la API:', error);
           });
         } else {
           setCurrentUser(null);
         }
+      } catch (err) {
+        console.error('[AuthContext] Error in onAuthStateChanged:', err);
       } finally {
+        console.log('[AuthContext] Setting loading to false');
         setLoading(false);
       }
     });
-    return () => unsubscribe();
+    return () => {
+      console.log('[AuthContext] Unsubscribing from auth state changes');
+      unsubscribe();
+    };
   }, [isWeb]);
 
   const signInWithGoogle = async () => {

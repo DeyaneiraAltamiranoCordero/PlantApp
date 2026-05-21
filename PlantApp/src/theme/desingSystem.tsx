@@ -185,11 +185,11 @@ const typography: ThemeTypography = {
         bold: "Nunito-Bold",
     },
     size: {
-        sm: 12,
-        base: 14,
-        lg: 16,
-        xl: 18,
-        xxl: 24,
+        sm: 14,
+        base: 16,
+        lg: 18,
+        xl: 20,
+        xxl: 27,
     },
     weight: {
         normal: "normal",

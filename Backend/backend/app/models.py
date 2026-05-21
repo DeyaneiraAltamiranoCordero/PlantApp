@@ -61,6 +61,8 @@ class PlantModel(FirestoreDocument):
     temperature: str
     careTypes: list[str] = Field(default_factory=list)
     lastWatered: str
+    wateringIntervalDays: int | None = None
+    nextWateringDate: str | None = None
     fertilizerType: str
     lastFertilized: str
     pests: list[str] = Field(default_factory=list)
@@ -127,6 +129,33 @@ class PlantDetailResponse(BaseModel):
     plant: PlantModel
     careTypes: list[CareTypeModel] = Field(default_factory=list)
     pests: list[PestModel] = Field(default_factory=list)
+
+
+class WateringReminderPlantModel(FirestoreDocument):
+    """Plant entry rendered inside the monthly watering calendar."""
+
+    name: str
+    imageUrl: str | None = None
+    categoryName: str | None = None
+    lastWatered: str | None = None
+    wateringIntervalDays: int | None = None
+    nextWateringDate: str | None = None
+    isOverdue: bool = False
+
+
+class WateringReminderDayModel(BaseModel):
+    """Single day in the watering calendar with all due plants."""
+
+    date: str
+    plants: list[WateringReminderPlantModel] = Field(default_factory=list)
+
+
+class WateringCalendarResponse(BaseModel):
+    """Monthly watering calendar for the home screen."""
+
+    month: str
+    days: list[WateringReminderDayModel] = Field(default_factory=list)
+    pendingPlants: list[WateringReminderPlantModel] = Field(default_factory=list)
 
 
 class ApiCollectionResponse(BaseModel):

@@ -1,7 +1,15 @@
 import { getAuth, getIdToken } from '@react-native-firebase/auth';
 import { Platform } from 'react-native';
 import { z } from 'zod';
-import { CareTypesArraySchema, CategoriesArraySchema, ISODateStringSchema, PestsArraySchema, PlantSchema, PlantsArraySchema } from './schemas';
+import {
+  CareTypesArraySchema,
+  CategoriesArraySchema,
+  ISODateStringSchema,
+  PestsArraySchema,
+  PlantSchema,
+  PlantsArraySchema,
+  WateringCalendarResponseSchema,
+} from './schemas';
 
 function resolveApiBaseUrl(): string {
   const configured = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
@@ -94,6 +102,8 @@ export type Plant = {
   careTypeIds?: string[];
   careTypes?: Array<string | CareType>;
   lastWatered?: string;
+  wateringIntervalDays?: number | null;
+  nextWateringDate?: string | null;
   fertilizerType?: string;
   lastFertilized?: string;
   pestIds?: string[];
@@ -374,6 +384,28 @@ export type Achievement = {
   plantId?: string;
 };
 
+export type WateringReminderPlant = {
+  id: string;
+  name: string;
+  imageUrl?: string | null;
+  categoryName?: string | null;
+  lastWatered?: string | null;
+  wateringIntervalDays?: number | null;
+  nextWateringDate?: string | null;
+  isOverdue?: boolean;
+};
+
+export type WateringReminderDay = {
+  date: string;
+  plants: WateringReminderPlant[];
+};
+
+export type WateringCalendarResponse = {
+  month: string;
+  days: WateringReminderDay[];
+  pendingPlants: WateringReminderPlant[];
+};
+
 export type UserProfileResponse = {
   user: User;
   stats: UserProfileStats;
@@ -535,6 +567,11 @@ export async function getPlants(): Promise<Plant[]> {
 
 export async function getUserPlants(userUid: string): Promise<Plant[]> {
   return apiRequest(`/api/users/${userUid}/plants`, PlantsArraySchema);
+}
+
+export async function getWateringCalendar(userUid: string, month?: string): Promise<WateringCalendarResponse> {
+  const query = month ? `?month=${encodeURIComponent(month)}` : '';
+  return apiRequest(`/api/users/${userUid}/watering-calendar${query}`, WateringCalendarResponseSchema);
 }
 
 export async function createPlant(payload: CreatePlantPayload): Promise<Plant> {
