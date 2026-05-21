@@ -1,9 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { useTheme } from '../../theme/desingSystem';
 
-export type LoginStyles = ReturnType<typeof useLoginTheme>['styles'];
-export type LoginTheme = ReturnType<typeof useLoginTheme>['theme'];
-
 export const useLoginTheme = () => {
   const { theme, isDark } = useTheme();
 

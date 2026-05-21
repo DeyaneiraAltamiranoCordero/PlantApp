@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { FontAwesome } from '@expo/vector-icons';
+import { Button } from '../../components/ui/Button';
+import { InputTextField } from '../../components/ui/InputText';
 import { useAuth } from '../../context/AuthContext';
 import { useLoginTheme } from './Login.styles';
-import { LoginHero } from './LoginHero';
-import { LoginCredentialsForm } from './LoginCredentialsForm';
-import { LoginActions } from './LoginActions';
-import { CreateAccountPrompt } from './CreateAccountPrompt';
 
 export default function LoginScreen() {
   const { signInWithGoogle, signInWithEmail, resetPassword, loading } = useAuth();
@@ -71,7 +70,24 @@ export default function LoginScreen() {
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
     >
-      <LoginHero styles={styles} />
+      <View style={styles.heroCard}>
+        <Image
+          source={require('../../../assets/images/logoSolo.png')}
+          style={styles.heroLeafTop}
+          resizeMode="contain"
+        />
+        <Image
+          source={require('../../../assets/images/logoSolo.png')}
+          style={styles.heroLeafBottom}
+          resizeMode="contain"
+        />
+        <Image
+          source={require('../../../assets/images/logoSolo.png')}
+          style={styles.heroLeaves}
+          resizeMode="contain"
+        />
+        <Text style={styles.title}>Bienvenido</Text>
+      </View>
 
       {loading && (
         <View style={styles.loadingWrapper}>
@@ -81,28 +97,77 @@ export default function LoginScreen() {
       )}
 
       <View style={styles.formCard}>
-        <LoginCredentialsForm
-          styles={styles}
-          email={email}
-          password={password}
-          onEmailChange={setEmail}
-          onPasswordChange={setPassword}
-          onResetPasswordPress={handleResetPassword}
-          isResettingPassword={isResettingPassword}
-          loading={loading}
+        <Text style={styles.formTitle}>Iniciar sesión</Text>
+
+        <InputTextField
+          label="Correo electrónico"
+          iconName="mail"
+          placeholder="tucorreo@ejemplo.com"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          value={email}
+          onChangeText={setEmail}
         />
 
-        <LoginActions
-          styles={styles}
-          theme={theme}
-          onEmailSignInPress={handleEmailSignIn}
-          onGoogleSignInPress={handleGoogleSignIn}
-          isEmailSigningIn={isEmailSigningIn}
-          isGoogleSigningIn={isGoogleSigningIn}
-          loading={loading}
+        <InputTextField
+          label="Contraseña"
+          iconName="lock"
+          placeholder="Tu contraseña"
+          secureTextEntry
+          autoCapitalize="none"
+          autoCorrect={false}
+          value={password}
+          onChangeText={setPassword}
         />
 
-        <CreateAccountPrompt styles={styles} onPress={() => {}} />
+        <TouchableOpacity
+          style={styles.resetLink}
+          onPress={handleResetPassword}
+          disabled={isResettingPassword || loading}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.resetLinkText}>
+            {isResettingPassword ? 'Enviando enlace...' : 'Restablecer contraseña'}
+          </Text>
+        </TouchableOpacity>
+
+        <View style={styles.buttonContainer}>
+          <Button
+            title="Iniciar sesión"
+            onPress={handleEmailSignIn}
+            variant="primary"
+            size="lg"
+            loading={isEmailSigningIn}
+            disabled={loading || isEmailSigningIn || isGoogleSigningIn}
+          />
+
+          <Button
+            title="Continuar con Google"
+            onPress={handleGoogleSignIn}
+            variant="secondary"
+            size="lg"
+            loading={isGoogleSigningIn}
+            disabled={loading || isGoogleSigningIn || isEmailSigningIn}
+            leftIcon={
+              <FontAwesome
+                name="google"
+                size={20}
+                color={theme.colors.secondaryForeground}
+              />
+            }
+          />
+        </View>
+
+        <TouchableOpacity
+          style={styles.createAccountLink}
+          onPress={() => {}}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.createAccountText}>
+            ¿No tenés cuenta? <Text style={styles.createAccountTextStrong}>Crear una cuenta</Text>
+          </Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
