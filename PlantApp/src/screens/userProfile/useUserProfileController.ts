@@ -106,7 +106,7 @@ export function useUserProfileController({ currentUser }: Params) {
           lastName: profile.user.lastName || '',
           secondLastName: profile.user.secondLastName || '',
           nickname: profile.user.nickname || profile.user.code || '',
-          email: profile.user.email || currentUser.email || '',
+          email: currentUser.email || profile.user.email || '',
           description: profile.user.description || '',
           birthday: profile.user.birthDate || '',
         });

@@ -44,6 +44,7 @@ export function PersonalInfoForm({
                 label="Primer apellido"
                 iconName="user"
                 placeholder="Tu primer apellido"
+                helperText="Opcional"
             />
 
             <InputText
@@ -52,6 +53,7 @@ export function PersonalInfoForm({
                 label="Segundo apellido"
                 iconName="user"
                 placeholder="Tu segundo apellido"
+                helperText="Opcional"
             />
 
             <InputText
@@ -67,9 +69,10 @@ export function PersonalInfoForm({
             <InputText
                 control={control}
                 name="email"
-                label="Correo"
+                label="Correo electrónico"
                 iconName="mail"
                 editable={false}
+                helperText="Solo lectura. Se define al crear la cuenta."
             />
 
             <InputText
@@ -97,6 +100,7 @@ export function PersonalInfoForm({
                 iconName="file-text"
                 placeholder="Cuéntanos sobre ti y tu amor por las plantas..."
                 multiline
+                helperText="Opcional"
             />
         </View>
     );

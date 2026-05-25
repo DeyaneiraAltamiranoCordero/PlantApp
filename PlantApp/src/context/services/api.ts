@@ -1,5 +1,6 @@
 import { getAuth, getIdToken } from '@react-native-firebase/auth';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { z } from 'zod';
 import {
   CareTypesArraySchema,
@@ -15,13 +16,17 @@ function resolveApiBaseUrl(): string {
   const configured = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
   if (configured) return configured;
 
+  const renderFallback = 'https://plantapp-7iyo.onrender.com';
+
+  if (!__DEV__) return renderFallback;
+
   // Android emulator cannot reach localhost directly; 10.0.2.2 maps to host machine.
   if (Platform.OS === 'android') return 'http://10.0.2.2:8000';
   if (Platform.OS === 'ios' || Platform.OS === 'web') return 'http://localhost:8000';
   return 'http://127.0.0.1:8000';
 }
 
-const API_BASE_URL = resolveApiBaseUrl();
+export const API_BASE_URL = resolveApiBaseUrl();
 console.log("Conectando con la API en:", API_BASE_URL);
 
 type ApiOptions = {
@@ -53,6 +58,7 @@ export class ApiValidationError extends Error {
 
 export type User = {
   id: string;
+  authUid?: string;
   email: string;
   code?: string;
   name: string;
@@ -437,6 +443,7 @@ export type CreateUserProfilePayload = {
   nickname?: string;
   profilePicture?: string | null;
   birthDate?: string;
+  description?: string;
   publicProfile?: boolean;
   isPrivate?: boolean;
 };
@@ -448,6 +455,16 @@ export type UpdatePlantPayload = Partial<Omit<Plant, 'id'>>;
 async function getAuthToken(): Promise<string> {
   if (Platform.OS === 'web') {
     throw new Error('Firebase Auth nativo no esta disponible en Web.');
+  }
+
+  // Prefer a server-issued token if present (backend session token stored after
+  // exchanging Google server auth code). This allows calling backend endpoints
+  // authenticated with the server token instead of Firebase ID token.
+  try {
+    const serverToken = await AsyncStorage.getItem('SERVER_TOKEN');
+    if (serverToken) return serverToken;
+  } catch {
+    // ignore storage errors and fallback to Firebase token
   }
 
   const user = getAuth().currentUser;

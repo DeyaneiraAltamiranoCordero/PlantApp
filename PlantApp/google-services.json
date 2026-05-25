@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "671777128731-bcdi8k0fadoek0n5co9a75b916tf1uvp.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.plantapp",
+            "certificate_hash": "3407a55acd476b5ffbb4daab21be6861b8d4d499"
+          }
+        },
+        {
           "client_id": "671777128731-hkd03bgupqjj5sq0flk2phit94c8ql4s.apps.googleusercontent.com",
           "client_type": 3
         }

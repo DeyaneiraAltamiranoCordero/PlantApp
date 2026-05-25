@@ -16,6 +16,7 @@ class FirestoreDocument(BaseModel):
 class UserModel(FirestoreDocument):
     """User profile persisted in the `users` collection."""
 
+    authUid: str | None = None
     code: str
     name: str
     lastName: str
@@ -29,6 +30,8 @@ class UserModel(FirestoreDocument):
     streak: int
     description: str | None = None
     bibliography: str | None = None
+    publicProfile: bool | None = None
+    isPrivate: bool | None = None
     achievements: list[str] = Field(default_factory=list)
 
 

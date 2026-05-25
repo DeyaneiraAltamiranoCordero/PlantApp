@@ -22,6 +22,7 @@ from .services import (
     delete_document,
     get_collection,
     get_document,
+    prepare_user_document_payload,
     update_document,
     identify_plant_mock,
 )
@@ -467,7 +468,18 @@ def create_collection_document(
     """Create a Firestore document, honoring custom IDs when provided."""
 
     body = payload.copy()
-    document_id = body.pop("id", None)
+    document_id = body.get("authUid") or body.pop("id", None)
+    if collection_name == "users":
+        if not document_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Se requiere authUid para crear el usuario.",
+            )
+        body = prepare_user_document_payload(
+            body,
+            user_id=document_id,
+            generate_code=True,
+        )
     if collection_name == "plants":
         body = _prepare_plant_payload(body, merge=False)
     return create_document(collection_name, body, document_id=document_id)
@@ -495,6 +507,18 @@ def replace_collection_document(
     """Replace a document entirely (no merge)."""
 
     body = payload.copy()
+    if collection_name == "users":
+        existing = get_document(collection_name, document_id)
+        incoming_email = str(body.get("email") or "").strip()
+        current_email = str(existing.get("email") or "").strip()
+        if incoming_email and incoming_email != current_email:
+            raise HTTPException(
+                status_code=400,
+                detail="El correo electrónico no se puede modificar desde el perfil.",
+            )
+        body.pop("email", None)
+        body.pop("id", None)
+        body.pop("authUid", None)
     if collection_name == "plants":
         body = _prepare_plant_payload(body, merge=False)
     return update_document(collection_name, document_id, body, merge=False)
@@ -512,6 +536,18 @@ def patch_collection_document(
     """Apply a partial update to a document (merge semantics)."""
 
     body = payload.copy()
+    if collection_name == "users":
+        existing = get_document(collection_name, document_id)
+        incoming_email = str(body.get("email") or "").strip()
+        current_email = str(existing.get("email") or "").strip()
+        if incoming_email and incoming_email != current_email:
+            raise HTTPException(
+                status_code=400,
+                detail="El correo electrónico no se puede modificar desde el perfil.",
+            )
+        body.pop("email", None)
+        body.pop("id", None)
+        body.pop("authUid", None)
     if collection_name == "plants":
         existing = get_document(collection_name, document_id)
         body = _prepare_plant_payload(body, merge=True, existing=existing)

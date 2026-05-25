@@ -1,28 +1,58 @@
-import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Image, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { Button } from '../../components/ui/Button';
 import { InputTextField } from '../../components/ui/InputText';
 import { useAuth } from '../../context/AuthContext';
 import { useLoginTheme } from './Login.styles';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen() {
-  const { signInWithGoogle, signInWithEmail, resetPassword, loading } = useAuth();
+  const { signInWithGoogle, createAccountWithEmail, signInWithEmail, resetPassword, loading } = useAuth();
   const { styles, theme } = useLoginTheme();
   console.log('[LoginScreen] Rendering');
 
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [secondLastName, setSecondLastName] = useState('');
+  const [rememberEmail, setRememberEmail] = useState(true);
   const [isGoogleSigningIn, setIsGoogleSigningIn] = useState(false);
   const [isEmailSigningIn, setIsEmailSigningIn] = useState(false);
+  const [isCreatingAccount, setIsCreatingAccount] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+
+  useEffect(() => {
+    const loadRememberedEmail = async () => {
+      const storedEmail = await AsyncStorage.getItem('REMEMBERED_EMAIL');
+      if (storedEmail) {
+        setEmail(storedEmail);
+        setRememberEmail(true);
+      }
+    };
+
+    void loadRememberedEmail();
+  }, []);
+
+  const persistRememberedEmail = async (nextEmail: string, shouldRemember: boolean) => {
+    if (shouldRemember) {
+      await AsyncStorage.setItem('REMEMBERED_EMAIL', nextEmail);
+      return;
+    }
+
+    await AsyncStorage.removeItem('REMEMBERED_EMAIL');
+  };
 
   const handleGoogleSignIn = async () => {
     setIsGoogleSigningIn(true);
     try {
       await signInWithGoogle();
     } catch (error) {
-      Alert.alert('Error', 'No se pudo iniciar sesión con Google. Intentá de nuevo.');
+      console.error('[LoginScreen] Google sign-in error:', error);
+      Alert.alert('Error', 'No se pudo iniciar sesión con Google. Revisá Metro/adb logs para detalles.');
     } finally {
       setIsGoogleSigningIn(false);
     }
@@ -38,10 +68,48 @@ export default function LoginScreen() {
     setIsEmailSigningIn(true);
     try {
       await signInWithEmail(normalizedEmail, password);
+      await persistRememberedEmail(normalizedEmail, rememberEmail);
     } catch (error) {
       Alert.alert('Error', 'No se pudo iniciar sesión con correo y contraseña. Verificá tus datos e intentá de nuevo.');
     } finally {
       setIsEmailSigningIn(false);
+    }
+  };
+
+  const handleCreateAccount = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedName = fullName.trim();
+
+    if (!normalizedName || !normalizedEmail || !password || !confirmPassword) {
+      Alert.alert('Faltan datos', 'Completá nombre, correo, contraseña y confirmación para crear la cuenta.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert('Contraseñas distintas', 'La contraseña y su confirmación deben coincidir.');
+      return;
+    }
+
+    setIsCreatingAccount(true);
+    try {
+      await createAccountWithEmail({
+        name: normalizedName,
+        email: normalizedEmail,
+        password,
+        confirmPassword,
+        lastName: lastName.trim() || undefined,
+        secondLastName: secondLastName.trim() || undefined,
+      });
+      await persistRememberedEmail(normalizedEmail, rememberEmail);
+      Alert.alert('Cuenta creada', 'Tu cuenta fue creada correctamente. Por favor iniciá sesión.');
+      setMode('login');
+      setPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      console.error('[LoginScreen] Create account error:', error);
+      Alert.alert('Error', 'No se pudo crear la cuenta. Revisá los datos e intentá de nuevo.');
+    } finally {
+      setIsCreatingAccount(false);
     }
   };
 
@@ -97,7 +165,51 @@ export default function LoginScreen() {
       )}
 
       <View style={styles.formCard}>
-        <Text style={styles.formTitle}>Iniciar sesión</Text>
+        <Text style={styles.formTitle}>{mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}</Text>
+
+        {mode === 'register' && (
+          <Text style={styles.formNote}>
+            {'Obligatorios: nombre, correo, contraseña y confirmación. Opcionales: apellidos.'}
+          </Text>
+        )}
+
+        {mode === 'register' && (
+          <>
+            <InputTextField
+              label="Nombre"
+              iconName="user"
+              placeholder="Tu nombre"
+              autoCapitalize="words"
+              autoCorrect={false}
+              value={fullName}
+              onChangeText={setFullName}
+            />
+
+            <InputTextField
+              label="Primer apellido"
+              iconName="user"
+              placeholder="Opcional"
+              autoCapitalize="words"
+              autoCorrect={false}
+              value={lastName}
+              onChangeText={setLastName}
+              helperText="Opcional"
+            />
+
+            <InputTextField
+              label="Segundo apellido"
+              iconName="user"
+              placeholder="Opcional"
+              autoCapitalize="words"
+              autoCorrect={false}
+              value={secondLastName}
+              onChangeText={setSecondLastName}
+              helperText="Opcional"
+            />
+
+            {/* Apodo removido del registro; backend generará uno desde el email si es necesario */}
+          </>
+        )}
 
         <InputTextField
           label="Correo electrónico"
@@ -121,26 +233,64 @@ export default function LoginScreen() {
           onChangeText={setPassword}
         />
 
-        <TouchableOpacity
-          style={styles.resetLink}
-          onPress={handleResetPassword}
-          disabled={isResettingPassword || loading}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.resetLinkText}>
-            {isResettingPassword ? 'Enviando enlace...' : 'Restablecer contraseña'}
-          </Text>
-        </TouchableOpacity>
+        {mode === 'register' && (
+          <InputTextField
+            label="Confirmar contraseña"
+            iconName="lock"
+            placeholder="Repetí tu contraseña"
+            secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+          />
+        )}
+
+        {mode === 'login' ? (
+          <>
+            <View style={styles.rememberRow}>
+              <Text style={styles.rememberLabel}>Recordar correo</Text>
+              <Switch
+                value={rememberEmail}
+                onValueChange={setRememberEmail}
+                trackColor={{ false: theme.colors.muted, true: theme.colors.primary }}
+                thumbColor={theme.colors.card}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={styles.resetLink}
+              onPress={handleResetPassword}
+              disabled={isResettingPassword || loading}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.resetLinkText}>
+                {isResettingPassword ? 'Enviando enlace...' : 'Restablecer contraseña'}
+              </Text>
+            </TouchableOpacity>
+          </>
+        ) : null}
 
         <View style={styles.buttonContainer}>
-          <Button
-            title="Iniciar sesión"
-            onPress={handleEmailSignIn}
-            variant="primary"
-            size="lg"
-            loading={isEmailSigningIn}
-            disabled={loading || isEmailSigningIn || isGoogleSigningIn}
-          />
+          {mode === 'login' ? (
+            <Button
+              title="Iniciar sesión"
+              onPress={handleEmailSignIn}
+              variant="primary"
+              size="lg"
+              loading={isEmailSigningIn}
+              disabled={loading || isEmailSigningIn || isGoogleSigningIn}
+            />
+          ) : (
+            <Button
+              title="Crear cuenta"
+              onPress={handleCreateAccount}
+              variant="primary"
+              size="lg"
+              loading={isCreatingAccount}
+              disabled={loading || isCreatingAccount || isGoogleSigningIn}
+            />
+          )}
 
           <Button
             title="Continuar con Google"
@@ -161,11 +311,14 @@ export default function LoginScreen() {
 
         <TouchableOpacity
           style={styles.createAccountLink}
-          onPress={() => {}}
+          onPress={() => setMode((current) => (current === 'login' ? 'register' : 'login'))}
           activeOpacity={0.7}
         >
           <Text style={styles.createAccountText}>
-            ¿No tenés cuenta? <Text style={styles.createAccountTextStrong}>Crear una cuenta</Text>
+            {mode === 'login' ? '¿No tenés cuenta? ' : '¿Ya tenés cuenta? '}
+            <Text style={styles.createAccountTextStrong}>
+              {mode === 'login' ? 'Crear una cuenta' : 'Iniciar sesión'}
+            </Text>
           </Text>
         </TouchableOpacity>
       </View>

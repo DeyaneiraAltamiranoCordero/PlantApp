@@ -1,4 +1,5 @@
 import {
+  createUserWithEmailAndPassword,
   getAuth,
   GoogleAuthProvider,
   onAuthStateChanged,
@@ -6,6 +7,7 @@ import {
   signInWithEmailAndPassword,
   signInWithCredential,
   signOut as firebaseSignOut,
+  updateProfile,
   type FirebaseAuthTypes,
 } from '@react-native-firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
@@ -13,23 +15,53 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import {
   ApiError,
+  type CreateUserProfilePayload,
   createUserProfile,
   getUserByUid,
-  updateUserProfile,
+  API_BASE_URL,
 } from './services/api';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 GoogleSignin.configure({
   webClientId: '671777128731-hkd03bgupqjj5sq0flk2phit94c8ql4s.apps.googleusercontent.com',
+  offlineAccess: true,
+  forceCodeForRefreshToken: true,
 });
+
+function stringifyError(err: unknown) {
+  try {
+    if (err instanceof Error) {
+      const own: Record<string, unknown> = {};
+      Object.getOwnPropertyNames(err).forEach((k) => (own[k] = (err as any)[k]));
+      return { message: err.message, name: err.name, stack: err.stack, ...own };
+    }
+    return JSON.parse(JSON.stringify(err, Object.getOwnPropertyNames(err as object || {})));
+  } catch (e) {
+    try {
+      return String(err);
+    } catch (_) {
+      return 'Unknown error';
+    }
+  }
+}
 
 interface AuthContextType {
   currentUser: FirebaseAuthTypes.User | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
+  createAccountWithEmail: (payload: CreateAccountPayload) => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
+
+type CreateAccountPayload = {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  lastName?: string;
+  secondLastName?: string;
+};
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -38,22 +70,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const isWeb = Platform.OS === 'web';
 
-  const syncUserToApi = async (user: FirebaseAuthTypes.User) => {
-    const displayName = user.displayName ?? '';
+  const buildUserProfilePayload = (
+    user: FirebaseAuthTypes.User,
+    overrides: Partial<CreateUserProfilePayload> = {},
+  ): CreateUserProfilePayload => {
+    const displayName = overrides.name ?? user.displayName ?? '';
     const [firstName, ...rest] = displayName.split(' ').filter(Boolean);
-    const fallbackName = firstName || 'Usuario';
     const lastName = rest.join(' ');
-    const nicknameFromEmail = user.email?.split('@')[0] || `plantLover_${user.uid.substring(0, 4)}`;
+    const nicknameFromEmail =
+      overrides.nickname?.trim() ||
+      user.email?.split('@')[0] ||
+      `plantLover_${user.uid.substring(0, 4)}`;
 
-    const basePayload = {
+    return {
       authUid: user.uid,
-      email: user.email ?? '',
-      name: fallbackName,
+      email: overrides.email ?? user.email ?? '',
+      name: displayName.trim() || firstName || 'Usuario',
       nickname: nicknameFromEmail,
+      lastName: overrides.lastName ?? (lastName || undefined),
+      secondLastName: overrides.secondLastName || undefined,
       profilePicture: user.photoURL ?? null,
-      lastName: lastName || undefined,
+      birthDate: overrides.birthDate || undefined,
       publicProfile: true,
+      isPrivate: false,
     };
+  };
+
+  const syncUserToApi = async (
+    user: FirebaseAuthTypes.User,
+    overrides: Partial<CreateUserProfilePayload> = {},
+  ) => {
+    const basePayload = buildUserProfilePayload(user, overrides);
 
     try {
       await getUserByUid(user.uid);
@@ -63,6 +110,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       console.error('Error sincronizando usuario con la API:', error);
+    }
+  };
+
+  const createAccountWithEmail = async (payload: CreateAccountPayload) => {
+    if (isWeb) {
+      throw new Error('La creación de cuentas con email no está habilitada en Web con esta configuración.');
+    }
+
+    const name = payload.name.trim();
+    const email = payload.email.trim().toLowerCase();
+    const password = payload.password;
+    const confirmPassword = payload.confirmPassword;
+    const lastName = payload.lastName?.trim() || undefined;
+    const secondLastName = payload.secondLastName?.trim() || undefined;
+
+    if (!name) {
+      throw new Error('El nombre es obligatorio para crear la cuenta.');
+    }
+    if (!email) {
+      throw new Error('El correo electrónico es obligatorio para crear la cuenta.');
+    }
+    if (!password) {
+      throw new Error('La contraseña es obligatoria para crear la cuenta.');
+    }
+    if (password !== confirmPassword) {
+      throw new Error('Las contraseñas no coinciden.');
+    }
+
+    const auth = getAuth();
+    const credential = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(credential.user, { displayName: name });
+    await syncUserToApi(credential.user, {
+      name,
+      email,
+      lastName,
+      secondLastName,
+    });
+    // After creating the account and syncing to backend, sign out so the user
+    // is not automatically logged in. User should log in explicitly.
+    try {
+      await firebaseSignOut(auth);
+    } catch (err) {
+      console.error('[AuthContext] Error signing out after account creation:', err);
     }
   };
 
@@ -109,15 +199,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const auth = getAuth();
     await GoogleSignin.hasPlayServices();
     const signInResult = await GoogleSignin.signIn();
-    console.log('SignIn result:', JSON.stringify(signInResult));
-    const idToken = signInResult.data?.idToken;
-    console.log('idToken:', idToken ? 'obtenido' : 'NULL');
+    console.log('[AuthContext] SignIn result raw:', signInResult);
+
+    // Useful quick-inspection logs for debugging DEVELOPER_ERROR
+    try {
+      const idToken = (signInResult as any).data?.idToken ?? (signInResult as any).idToken;
+      const serverAuthCode = (signInResult as any).serverAuthCode ?? (signInResult as any).data?.serverAuthCode;
+      console.log('[AuthContext] signInResult keys:', Object.keys(signInResult || {}));
+      console.log('[AuthContext] idToken present?', !!idToken, 'serverAuthCode present?', !!serverAuthCode);
+      if (typeof idToken === 'string') console.log('[AuthContext] idToken (head):', idToken.slice(0, 40));
+      if (typeof serverAuthCode === 'string') console.log('[AuthContext] serverAuthCode:', serverAuthCode);
+    } catch (e) {
+      console.warn('[AuthContext] Could not introspect signInResult:', e);
+    }
+
+    // idToken used to sign in with Firebase
+    const idToken = signInResult.data?.idToken ?? (signInResult as any).idToken;
+    // serverAuthCode to exchange on backend for refresh_token (offline access)
+    const serverAuthCode = (signInResult as any).serverAuthCode ?? signInResult.data?.serverAuthCode;
+
     if (!idToken) throw new Error('No se obtuvo el token de Google');
+
+    // If we have a server auth code, send it to backend to obtain server session token
+    if (serverAuthCode) {
+      try {
+        const resp = await fetch(`${API_BASE_URL}/auth/google`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: serverAuthCode }),
+        });
+        const respText = await resp.text();
+        let parsedBody: unknown = respText;
+        try { parsedBody = JSON.parse(respText); } catch (_) { /* not JSON */ }
+        console.log('[AuthContext] Backend /auth/google response:', { status: resp.status, body: parsedBody });
+        if (resp.ok) {
+          if ((parsedBody as any)?.token) {
+            await AsyncStorage.setItem('SERVER_TOKEN', (parsedBody as any).token);
+            console.log('[AuthContext] Stored server session token');
+          } else {
+            console.warn('[AuthContext] Backend returned 200 but no token in body', parsedBody);
+          }
+        } else {
+          console.error('[AuthContext] Backend exchange failed', resp.status, parsedBody);
+        }
+      } catch (err) {
+        console.error('[AuthContext] Error sending serverAuthCode to backend:', stringifyError(err));
+      }
+    }
+
     const googleCredential = GoogleAuthProvider.credential(idToken);
     const result = await signInWithCredential(auth, googleCredential);
     console.log('Firebase user:', result.user.uid);
   } catch (error) {
-    console.error('Error en Google Sign-In:', error);
+    console.error('Error en Google Sign-In:', stringifyError(error));
+    try {
+      if ((error as any)?.code) console.error('[AuthContext] Google error code:', (error as any).code);
+    } catch (_) {}
     throw error;
   }
 };
@@ -167,7 +304,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, loading, signInWithGoogle, signInWithEmail, resetPassword, signOut }}>
+    <AuthContext.Provider
+      value={{
+        currentUser,
+        loading,
+        signInWithGoogle,
+        createAccountWithEmail,
+        signInWithEmail,
+        resetPassword,
+        signOut,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

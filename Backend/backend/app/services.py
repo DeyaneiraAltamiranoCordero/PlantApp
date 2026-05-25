@@ -115,6 +115,76 @@ def update_document(
     return _serialize_document(doc_ref.get())
 
 
+def prepare_user_document_payload(
+    payload: dict[str, Any],
+    *,
+    user_id: str,
+    auth_user: Any | None = None,
+    generate_code: bool = False,
+) -> dict[str, Any]:
+    """Normalize a user payload into the shape expected by Firestore and the API."""
+
+    normalized = payload.copy()
+
+    name = str(normalized.get("name") or getattr(auth_user, "display_name", "") or "").strip()
+    email = str(normalized.get("email") or getattr(auth_user, "email", "") or "").strip()
+
+    if not name:
+        raise HTTPException(
+            status_code=400,
+            detail="El nombre es obligatorio para crear el usuario.",
+        )
+    if not email:
+        raise HTTPException(
+            status_code=400,
+            detail="El correo electrónico es obligatorio para crear el usuario.",
+        )
+
+    nickname = str(normalized.get("nickname") or "").strip()
+    if not nickname:
+        nickname = email.split("@", maxsplit=1)[0].strip()
+    if not nickname:
+        nickname = f"plantLover_{user_id[:4]}"
+
+    profile_picture = normalized.get("profilePicture")
+    if profile_picture in (None, ""):
+        profile_picture = getattr(auth_user, "photo_url", "") or ""
+
+    public_profile = normalized.get("publicProfile")
+    if public_profile is None:
+        public_profile = True
+
+    is_private = normalized.get("isPrivate")
+    if is_private is None:
+        is_private = not bool(public_profile)
+
+    normalized_payload: dict[str, Any] = {
+        "authUid": user_id,
+        "email": email,
+        "name": name,
+        "lastName": str(normalized.get("lastName") or "").strip(),
+        "secondLastName": str(normalized.get("secondLastName") or "").strip(),
+        "nickname": nickname,
+        "profilePicture": profile_picture or "",
+        "plantCount": int(normalized.get("plantCount") or 0),
+        "birthDate": str(normalized.get("birthDate") or "").strip(),
+        "registrationDate": str(normalized.get("registrationDate") or datetime.utcnow().isoformat()),
+        "streak": int(normalized.get("streak") or 0),
+        "description": str(normalized.get("description") or "").strip(),
+        "bibliography": str(normalized.get("bibliography") or "").strip(),
+        "achievements": normalized.get("achievements") if isinstance(normalized.get("achievements"), list) else [],
+        "publicProfile": bool(public_profile),
+        "isPrivate": bool(is_private),
+    }
+
+    if generate_code:
+        normalized_payload["code"] = str(normalized.get("code") or _generate_next_user_code(get_firestore_client()))
+    else:
+        normalized_payload["code"] = str(normalized.get("code") or "")
+
+    return normalized_payload
+
+
 def delete_document(collection_name: str, document_id: str) -> dict[str, str]:
     """Elimina un documento existente y confirma el resultado."""
 
@@ -140,52 +210,46 @@ def ensure_user_document(user_id: str) -> dict[str, Any]:
 
     try:
         user = get_document("users", user_id)
-        missing_fields: dict[str, Any] = {}
-        if "description" not in user:
-            missing_fields["description"] = ""
-        if "bibliography" not in user:
-            missing_fields["bibliography"] = ""
-        if missing_fields:
-            user = update_document("users", user_id, missing_fields, merge=True)
-        return user
     except HTTPException as exc:
         if exc.status_code != 404:
             raise
+        user = None
 
+    auth_user = None
     try:
         auth_user = auth.get_user(user_id)
-    except auth.UserNotFoundError as cause:
-        raise HTTPException(
-            status_code=404,
-            detail=(
-                "No se encontro el usuario solicitado en Firestore y tampoco en Firebase Auth."
-            ),
-        ) from cause
+    except auth.UserNotFoundError:
+        auth_user = None
 
-    name_parts = (auth_user.display_name or "").split()
-    first_name = name_parts[0] if name_parts else "Usuario"
-    remaining_names = " ".join(name_parts[1:]) if len(name_parts) > 1 else ""
+    if user is not None:
+        normalized_user = prepare_user_document_payload(
+            user,
+            user_id=user_id,
+            auth_user=auth_user,
+            generate_code=True,
+        )
+        if normalized_user != user:
+            user = update_document("users", user_id, normalized_user, merge=True)
+        return user
 
-    db = get_firestore_client()
-    payload = {
-        "id": user_id,
-        "code": _generate_next_user_code(db),
-        "name": first_name,
-        "lastName": remaining_names,
-        "secondLastName": "",
-        "nickname": auth_user.display_name or f"plantLover_{user_id[:4]}",
-        "profilePicture": auth_user.photo_url or "",
-        "plantCount": 0,
-        "birthDate": "",
-        "registrationDate": datetime.utcnow().isoformat(),
-        "email": auth_user.email or "",
-        "streak": 0,
-        "description": "",
-        "bibliography": "",
-        "achievements": [],
-    }
+    try:
+        if auth_user is None:
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    "No se encontro el usuario solicitado en Firestore y tampoco en Firebase Auth."
+                ),
+            )
 
-    return create_document("users", payload, document_id=user_id)
+        payload = prepare_user_document_payload(
+            {},
+            user_id=user_id,
+            auth_user=auth_user,
+            generate_code=True,
+        )
+        return create_document("users", payload, document_id=user_id)
+    except HTTPException:
+        raise
 
 
 def _generate_next_user_code(db) -> str:

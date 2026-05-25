@@ -95,6 +95,28 @@ export const useLoginTheme = () => {
       textAlign: 'center',
       marginBottom: theme.spacing.xs,
     },
+    formNote: {
+      color: theme.colors.mutedForeground,
+      fontSize: theme.typography.size.sm,
+      fontFamily: theme.typography.fontFamily.default,
+      textAlign: 'center',
+      lineHeight: 20,
+    },
+    rememberRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: theme.spacing.md,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      borderRadius: theme.radius.md,
+      backgroundColor: theme.colors.muted,
+    },
+    rememberLabel: {
+      color: theme.colors.foreground,
+      fontSize: theme.typography.size.base,
+      fontFamily: theme.typography.fontFamily.semibold,
+    },
     resetLink: {
       alignSelf: 'flex-start',
     },
