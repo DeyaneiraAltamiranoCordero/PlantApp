@@ -1,6 +1,8 @@
 import { useNavigation } from '@react-navigation/native';
 import React from "react";
-import { ActivityIndicator, Alert, ScrollView, View } from "react-native";
+import { ActivityIndicator, Alert, Modal, ScrollView, View } from "react-native";
+import { CameraScanner } from '../../components/camera/CameraScanner';
+import { uploadUserPhoto } from '../../context/services/api';
 import { PersonalInfoForm } from "../../components/screenUserProfile/PersonalInfoForm";
 import { MyPlantsSection } from "../../components/screenHome/MyPlantsSection";
 import { ProfileHeader } from "../../components/screenUserProfile/ProfileHeader";
@@ -39,7 +41,36 @@ export default function UserProfile() {
     const { isDark, toggleTheme } = useTheme();
 
     const handleImageChange = () => {
-        console.log("Cambiar imagen presionado");
+        setShowCamera(true);
+    };
+
+    const [showCamera, setShowCamera] = React.useState(false);
+    const [isUploadingImage, setIsUploadingImage] = React.useState(false);
+
+    const handleProfileImage = async (photo: { uri?: string; base64?: string } | any) => {
+        const base64 = photo?.base64;
+        if (!base64) {
+            Alert.alert('Error', 'No se recibió la imagen en formato base64.');
+            return;
+        }
+
+        if (!currentUser) {
+            Alert.alert('Error', 'Usuario no autenticado');
+            return;
+        }
+
+        try {
+            setIsUploadingImage(true);
+            const url = await uploadUserPhoto(currentUser.uid, `profile_${currentUser.uid}.jpg`, base64);
+            setProfileImage(url);
+            setShowCamera(false);
+            Alert.alert('Listo', 'Foto de perfil actualizada.');
+        } catch (err) {
+            console.error('Error subiendo la foto:', err);
+            Alert.alert('Error', 'No se pudo subir la foto. Intentá de nuevo.');
+        } finally {
+            setIsUploadingImage(false);
+        }
     };
 
     const handleSignOut = async () => {
@@ -81,6 +112,15 @@ export default function UserProfile() {
                 </View>
             ) : (
                 <>
+                    <Modal visible={showCamera} animationType="slide" onRequestClose={() => setShowCamera(false)}>
+                        <CameraScanner
+                            mode="profile"
+                            onPhotoTaken={handleProfileImage}
+                            onGallerySelected={handleProfileImage}
+                            onClose={() => setShowCamera(false)}
+                        />
+                    </Modal>
+
                     <ProfileHeader
                         name={watchedName || ''}
                         nickname={watchedNickname || ''}

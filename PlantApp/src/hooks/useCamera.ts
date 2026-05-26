@@ -1,6 +1,7 @@
 //useCamera
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { CameraView, CameraType, FlashMode } from 'expo-camera';
+import type { RefObject } from 'react';
 
 import CameraService, {
   PhotoResult,
@@ -14,7 +15,7 @@ interface UseCameraOptions {
 
 interface UseCameraReturn {
 
-  cameraRef: React.RefObject<CameraView>;
+  cameraRef: RefObject<CameraView>;
   permissions: AppPermissions | null;
   isPermissionGranted: boolean;
   isLoadingPermissions: boolean;
@@ -75,7 +76,7 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
       }
       try {
         const photo = await CameraService.takePhoto(
-          cameraRef as React.RefObject<CameraView>,
+          cameraRef,
           options,
         );
         setLastPhoto(photo);

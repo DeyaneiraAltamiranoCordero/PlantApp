@@ -1,7 +1,7 @@
 //cameraService
 import { CameraView, CameraType, FlashMode } from 'expo-camera';
 import * as MediaLibrary from 'expo-media-library';
-import { RefObject } from 'react';
+import type { RefObject } from 'react';
 
 export interface PhotoResult {
   uri: string;

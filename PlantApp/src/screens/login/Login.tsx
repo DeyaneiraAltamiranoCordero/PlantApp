@@ -19,6 +19,7 @@ export default function LoginScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [lastName, setLastName] = useState('');
   const [secondLastName, setSecondLastName] = useState('');
+  const [nickname, setNickname] = useState('');
   const [rememberEmail, setRememberEmail] = useState(true);
   const [isGoogleSigningIn, setIsGoogleSigningIn] = useState(false);
   const [isEmailSigningIn, setIsEmailSigningIn] = useState(false);
@@ -207,7 +208,16 @@ export default function LoginScreen() {
               helperText="Opcional"
             />
 
-            {/* Apodo removido del registro; backend generará uno desde el email si es necesario */}
+            <InputTextField
+              label="Apodo"
+              iconName="at-sign"
+              placeholder="Opcional"
+              autoCapitalize="none"
+              autoCorrect={false}
+              value={nickname}
+              onChangeText={setNickname}
+              helperText="Opcional — si lo dejás vacío se completará automáticamente desde tu correo."
+            />
           </>
         )}
 

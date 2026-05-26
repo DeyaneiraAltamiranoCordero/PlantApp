@@ -1,19 +1,27 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Platform, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Platform, Alert } from 'react-native';
 import { CameraView } from 'expo-camera';
+import { Linking } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as MediaLibrary from 'expo-media-library';
 import { useTheme } from '../../theme/desingSystem';
 import { Button } from '../ui/Button';
 import { useCamera } from '../../hooks/useCamera';
+import type { PhotoResult } from '../../context/services/cameraService';
 
 interface CameraScannerProps {
-    onScan?: (data: any) => void;
+    mode?: 'profile' | 'plant-analysis';
+    onPhotoTaken?: (data: PhotoResult) => void | Promise<void>;
+    onGallerySelected?: (data: PhotoResult) => void | Promise<void>;
     onClose?: () => void;
 }
 
-export function CameraScanner({ onScan, onClose }: CameraScannerProps) {
+export function CameraScanner({
+    mode = 'plant-analysis',
+    onPhotoTaken,
+    onGallerySelected,
+    onClose,
+}: CameraScannerProps) {
     const { theme } = useTheme();
     const {
         cameraRef,
@@ -27,7 +35,9 @@ export function CameraScanner({ onScan, onClose }: CameraScannerProps) {
         toggleFacing,
         toggleFlash,
         error,
-    } = useCamera({ requestOnMount: false });
+    } = useCamera();
+
+    const title = mode === 'profile' ? 'Foto de perfil' : 'Enfoca tu planta';
 
     const styles = StyleSheet.create({
         container: {
@@ -150,46 +160,34 @@ export function CameraScanner({ onScan, onClose }: CameraScannerProps) {
         }
     });
 
-    React.useEffect(() => {
-        // Intentamos actualizar el estado interno por si acaso, 
-        // pero no bloquearemos la pantalla si tarda.
-        requestPermissions();
-    }, []);
-
-    // Si explícitamente se nos dice que NO hay permiso, mostramos el botón.
-    // Pero si está "cargando" o es "null", vamos a intentar mostrar la cámara igualmente.
     if (permissions && !isPermissionGranted) {
+        const isDenied = permissions.camera === 'denied';
         return (
             <View style={styles.permissionContainer}>
                 <Text style={styles.permissionText}>La cámara necesita permiso para funcionar</Text>
-                <Button title="Conceder Permiso" onPress={requestPermissions} />
+                {isDenied ? (
+                    <Button
+                        title="Abrir ajustes"
+                        onPress={() => {
+                            Linking.openSettings();
+                        }}
+                    />
+                ) : (
+                    <Button title="Conceder Permiso" onPress={requestPermissions} />
+                )}
             </View>
         );
     }
 
     const handleCapture = async () => {
-        // Necesitamos base64: true para enviar la imagen real al servidor de IA
         const photo = await takePhoto({ quality: 0.7, base64: true });
-        
         if (photo) {
-            // Guardar en la galería automáticamente
-            try {
-                await MediaLibrary.saveToLibraryAsync(photo.uri);
-                console.log("Foto guardada en la galería.");
-            } catch (err) {
-                console.warn("No se pudo guardar en la galería:", err);
-            }
-
-            if (onScan) {
-                onScan(photo);
-            }
+            await onPhotoTaken?.(photo);
         }
     };
 
     const pickImage = async () => {
-        // 1. Pedir permiso explícitamente
         const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        
         if (permissionResult.granted === false) {
             Alert.alert(
                 "Permiso requerido",
@@ -199,22 +197,22 @@ export function CameraScanner({ onScan, onClose }: CameraScannerProps) {
             return;
         }
 
-        // 2. Abrir la galería con optimización de tamaño
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ['images'],
             allowsEditing: true,
-            aspect: [1, 1], // Cuadrado suele ser mejor para IA
-            quality: 0.5,   // Bajamos un poco la calidad para asegurar rapidez
+            aspect: [1, 1],
+            quality: 0.7,
             base64: true,
         });
 
-        if (!result.canceled && result.assets && result.assets[0].base64) {
-            if (onScan) {
-                onScan({
-                    uri: result.assets[0].uri,
-                    base64: result.assets[0].base64
-                });
-            }
+        const asset = result.assets?.[0];
+        if (!result.canceled && asset?.base64) {
+            await onGallerySelected?.({
+                uri: asset.uri,
+                width: asset.width ?? 0,
+                height: asset.height ?? 0,
+                base64: asset.base64,
+            });
         }
     };
 
@@ -222,7 +220,7 @@ export function CameraScanner({ onScan, onClose }: CameraScannerProps) {
 
     return (
         <View style={styles.container}>
-            <CameraView ref={cameraRef} style={styles.camera} facing={facing} flash={flashMode}>
+            <CameraView ref={cameraRef as any} style={styles.camera} facing={facing} flash={flashMode}>
                 <TouchableOpacity
                     style={styles.closeButton}
                     onPress={onClose}
@@ -242,11 +240,10 @@ export function CameraScanner({ onScan, onClose }: CameraScannerProps) {
                 </TouchableOpacity>
 
                 <View style={styles.titleContainer}>
-                    <Text style={styles.titleText}>Enfoca tu planta</Text>
+                    <Text style={styles.titleText}>{title}</Text>
                 </View>
                 
                 <View style={styles.overlay}>
-                    {/* Marco visual del escáner */}
                     <View style={styles.scanFrame} />
                 </View>
 
@@ -255,7 +252,6 @@ export function CameraScanner({ onScan, onClose }: CameraScannerProps) {
                         <MaterialCommunityIcons name="image-multiple-outline" size={28} color="white" />
                     </TouchableOpacity>
 
-                    {/* Botón central para capturar foto real */}
                     <TouchableOpacity style={styles.captureButton} onPress={handleCapture}>
                         <View style={styles.captureInner} />
                     </TouchableOpacity>

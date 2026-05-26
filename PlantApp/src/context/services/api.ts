@@ -578,6 +578,14 @@ export async function updateUserProfile(
   return normalizeUser(raw);
 }
 
+export async function uploadUserPhoto(userUid: string, filename: string, base64content: string): Promise<string> {
+  const raw = await apiRequest<{ url: string }>(`/api/users/${userUid}/photo`, {
+    method: 'POST',
+    body: { filename, content: `data:image/jpeg;base64,${base64content}` },
+  });
+  return raw.url;
+}
+
 export async function getPlants(): Promise<Plant[]> {
   return apiRequest(`/api/plants`, PlantsArraySchema);
 }

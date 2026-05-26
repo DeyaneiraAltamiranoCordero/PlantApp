@@ -21,12 +21,22 @@ const normalizeStatus = (granted: boolean, status: string): PermissionStatus => 
 const PermissionService = {
 
   async requestCameraPermission(): Promise<PermissionStatus> {
+    // First check current permission to avoid re-prompting unnecessarily
+    const current = await getCameraPermissionsAsync();
+    const currentStatus = normalizeStatus(current.granted, current.status);
+    if (currentStatus !== 'undetermined') return currentStatus;
+
     const { granted, status } = await requestCameraPermissionsAsync();
     return normalizeStatus(granted, status);
   },
 
 
   async requestMediaLibraryPermission(): Promise<PermissionStatus> {
+    // Check current media library permission first
+    const current = await MediaLibrary.getPermissionsAsync();
+    const currentStatus = normalizeStatus(current.granted, current.status);
+    if (currentStatus !== 'undetermined') return currentStatus;
+
     const { granted, status } = await MediaLibrary.requestPermissionsAsync();
     return normalizeStatus(granted, status);
   },
@@ -46,12 +56,19 @@ const PermissionService = {
 
 
   async requestAllPermissions(): Promise<AppPermissions> {
-    const [camera, mediaLibrary] = await Promise.all([
-      PermissionService.requestCameraPermission(),
-      PermissionService.requestMediaLibraryPermission(),
-    ]);
+    // Check current permissions and request only those that are undetermined
+    const current = await PermissionService.checkAllPermissions();
+    const results: AppPermissions = { ...current };
 
-    return { camera, mediaLibrary };
+    if (current.camera === 'undetermined') {
+      results.camera = await PermissionService.requestCameraPermission();
+    }
+
+    if (current.mediaLibrary === 'undetermined') {
+      results.mediaLibrary = await PermissionService.requestMediaLibraryPermission();
+    }
+
+    return results;
   },
 
   isGranted: (status: PermissionStatus): boolean => status === 'granted',

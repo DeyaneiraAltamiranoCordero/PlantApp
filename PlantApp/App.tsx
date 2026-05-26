@@ -12,6 +12,7 @@ import { ToastProvider } from './src/context/ToastContext';
 import TabNavigator from "./src/navegation/barNavegation";
 import LoginScreen from './src/screens/login/Login';
 import UserProfileScreen from './src/screens/userProfile/UserProfile';
+import ScanResultScreen from './src/screens/scanner/ScanResultScreen';
 import { ThemeProvider, useTheme } from "./src/theme/desingSystem";
 import { useFonts, Nunito_400Regular, Nunito_600SemiBold, Nunito_700Bold } from '@expo-google-fonts/nunito';
 
@@ -63,6 +64,7 @@ function Navigation() {
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Main" component={TabNavigator} />
           <Stack.Screen name="UserProfile" component={UserProfileScreen} />
+          <Stack.Screen name="ScanResult" component={ScanResultScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </View>
