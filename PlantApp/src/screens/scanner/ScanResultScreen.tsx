@@ -30,6 +30,10 @@ export default function ScanResultScreen({ navigation, route }: any) {
         const scientificName = result?.scientific_name?.trim();
 
         if (!scientificName) {
+            console.log('[ScanResult] no scientific_name, using watering info from route params:', {
+                wateringFrequencyDays: result?.wateringFrequencyDays ?? null,
+                wateringNotes: result?.wateringNotes ?? null,
+            });
             setWateringInfo({
                 wateringFrequencyDays: result?.wateringFrequencyDays ?? null,
                 wateringNotes: result?.wateringNotes ?? null,
@@ -39,8 +43,10 @@ export default function ScanResultScreen({ navigation, route }: any) {
             };
         }
 
+        console.log('[ScanResult] about to call Gemini for watering info:', scientificName);
         void getPlantWateringInfo(scientificName)
             .then((info) => {
+                console.log('[ScanResult] Gemini watering info received:', info);
                 if (isMounted) {
                     setWateringInfo(info);
                     if (!hasManualWateringEditRef.current) {
@@ -51,7 +57,8 @@ export default function ScanResultScreen({ navigation, route }: any) {
                     }
                 }
             })
-            .catch(() => {
+            .catch((error) => {
+                console.warn('[ScanResult] Gemini call failed, keeping route params watering info:', error);
                 if (isMounted) {
                     setWateringInfo({
                         wateringFrequencyDays: result?.wateringFrequencyDays ?? null,

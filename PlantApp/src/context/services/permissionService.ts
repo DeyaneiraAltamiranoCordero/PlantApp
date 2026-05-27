@@ -19,11 +19,11 @@ const PermissionService = {
 
   async requestCameraPermission(): Promise<PermissionStatus> {
     // First check current permission to avoid re-prompting unnecessarily
-    const current = await Camera.getCameraPermissionsAsync();
+    const current = await (Camera as any).getCameraPermissionsAsync();
     const currentStatus = normalizeStatus(current.granted, current.status);
     if (currentStatus !== 'undetermined') return currentStatus;
 
-    const { granted, status } = await Camera.requestCameraPermissionsAsync();
+    const { granted, status } = await (Camera as any).requestCameraPermissionsAsync();
     return normalizeStatus(granted, status);
   },
 
@@ -41,7 +41,7 @@ const PermissionService = {
 
   async checkAllPermissions(): Promise<AppPermissions> {
     const [camera, mediaLibrary] = await Promise.all([
-      Camera.getCameraPermissionsAsync(),
+      (Camera as any).getCameraPermissionsAsync(),
       MediaLibrary.getPermissionsAsync(),
     ]);
 

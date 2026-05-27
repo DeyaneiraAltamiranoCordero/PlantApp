@@ -47,26 +47,41 @@ export async function getPlantWateringInfo(scientificName: string): Promise<Plan
   const speciesName = scientificName.trim();
 
   if (!speciesName || !geminiClient) {
+    console.warn('[Gemini] skipped call because speciesName or client is missing', {
+      speciesName,
+      hasClient: Boolean(geminiClient),
+      hasApiKey: Boolean(GEMINI_API_KEY),
+      model: GEMINI_MODEL,
+    });
     return EMPTY_WATERING_INFO;
   }
 
   try {
+    console.log('[Gemini] getPlantWateringInfo start:', speciesName);
     const model = geminiClient.getGenerativeModel({ model: GEMINI_MODEL });
-    const prompt = `You are a botanist expert. Given the scientific name of a plant, return ONLY a JSON object with no additional text, no markdown, no backticks. The JSON must have exactly these two fields: wateringFrequencyDays (integer: the recommended number of days between waterings for this species under normal indoor conditions) and wateringNotes (string: brief practical watering observations for this species, such as seasonal variations or special considerations). If you cannot determine the information with confidence, return null for that field. Scientific name: ${speciesName}`;
+    const prompt = `You are a plant expert. Return ONLY a JSON object, no markdown, no extra text. Given this plant scientific name, provide: wateringFrequencyDays (integer: how many days between waterings) and wateringNotes (string: one short sentence about watering this plant, for example 'Needs very little water' or 'Water abundantly' or 'Mist regularly to simulate humidity'). Scientific name: ${speciesName}`;
 
     const response = await model.generateContent(prompt);
     const rawText = response.response.text();
+    console.log('[Gemini] raw response:', rawText);
     const parsed = JSON.parse(rawText) as Record<string, unknown>;
 
+    console.log('[Gemini] parsed response:', parsed);
+
     if (!parsed || typeof parsed !== 'object') {
+      console.warn('[Gemini] parsed response was not an object');
       return EMPTY_WATERING_INFO;
     }
 
-    return {
+    const wateringInfo = {
       wateringFrequencyDays: normalizeFrequencyDays(parsed.wateringFrequencyDays),
       wateringNotes: normalizeNotes(parsed.wateringNotes),
     };
-  } catch {
+
+    console.log('[Gemini] normalized watering info:', wateringInfo);
+    return wateringInfo;
+  } catch (error) {
+    console.warn('[Gemini] getPlantWateringInfo failed, returning empty watering info', error);
     return EMPTY_WATERING_INFO;
   }
 }

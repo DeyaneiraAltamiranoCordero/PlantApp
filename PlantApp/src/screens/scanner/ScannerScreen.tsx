@@ -15,9 +15,12 @@ export default function ScannerScreen({ navigation }: any) {
             console.log("Iniciando análisis con IA...");
             const imageData = data.base64 || data.uri;
             const analysis = await identifyPlant(imageData);
+            console.log('[Scanner] Plant.id scientific_name:', analysis.scientific_name);
+            console.log('[Scanner] about to call Gemini for watering info');
             const wateringInfo = analysis.scientific_name
                 ? await getPlantWateringInfo(analysis.scientific_name)
                 : { wateringFrequencyDays: null, wateringNotes: null };
+            console.log('[Scanner] Gemini result received:', wateringInfo);
             const mergedAnalysis = {
                 ...analysis,
                 ...wateringInfo,
