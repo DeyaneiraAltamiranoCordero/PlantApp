@@ -246,6 +246,7 @@ export default function HomeScreen() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [calendar, setCalendar] = useState<ReturnType<typeof buildFallbackCalendar> | null>(null);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(todayIso());
   const [weatherState, setWeatherState] = useState<WeatherState>('default');
 
@@ -314,12 +315,15 @@ export default function HomeScreen() {
   const loadSummary = useCallback(async (showLoading = true) => {
     if (!currentUser) return;
     if (showLoading) setIsLoading(true);
+    setSummaryError(null);
 
     try {
       const profile = await getUserProfile(currentUser.uid);
       setCalendar(buildFallbackCalendar(profile.plants as Array<Record<string, unknown>>, monthKey));
     } catch (error) {
-      console.error('Error al cargar resumen:', error);
+      console.warn('Error al cargar resumen:', error);
+      setCalendar(buildFallbackCalendar([], monthKey));
+      setSummaryError('No pudimos cargar tus plantas. Mostrando un calendario vacío por ahora.');
     } finally {
       setIsLoading(false);
     }
@@ -415,6 +419,13 @@ export default function HomeScreen() {
             <Text style={styles.calendarBadgeText}>{calendar?.days.length ?? 0}</Text>
           </View>
         </View>
+
+        {summaryError ? (
+          <View style={styles.summaryNotice}>
+            <Feather name="alert-circle" size={16} color={theme.colors.destructive} />
+            <Text style={styles.summaryNoticeText}>{summaryError}</Text>
+          </View>
+        ) : null}
 
         {isLoading ? (
           <View style={styles.loadingCard}>
