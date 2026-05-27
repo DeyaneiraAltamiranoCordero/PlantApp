@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Modal, Platform, ScrollView, TouchableOpacity, View, Text, TextInput, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Category, Plant } from '../../context/services/api';
@@ -165,6 +165,16 @@ export function PlantDetailForm({
     careTypes: initialCareTypeIds.join(', '),
   });
 
+  // If a Gemini-suggested watering frequency exists on the plant, prefill
+  // the main `wateringIntervalDays` field so the form only shows one field.
+  useEffect(() => {
+    if (!values.wateringIntervalDays && values.wateringFrequencyDays) {
+      setValues((prev) => ({ ...prev, wateringIntervalDays: prev.wateringFrequencyDays }));
+    }
+    // We intentionally only want to run when the suggested value changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values.wateringFrequencyDays]);
+
   const [displayLastFertilized, setDisplayLastFertilized] = useState(() =>
     formatIsoToDisplayDate(plant.lastFertilized || ''),
   );
@@ -308,49 +318,25 @@ export function PlantDetailForm({
 
     setErrors((prev) => ({ ...prev, wateringIntervalDays: undefined }));
 
-    const wateringFrequencyInput = values.wateringFrequencyDays.trim();
-    let wateringFrequencyDays: number | undefined;
-    if (wateringFrequencyInput) {
-      if (!/^\d+$/.test(wateringFrequencyInput)) {
-        setErrors((prev) => ({
-          ...prev,
-          wateringFrequencyDays: 'Usá un número entero positivo.',
-        }));
-        showToast({
-          kind: 'warning',
-          title: 'Aviso',
-          message: 'La frecuencia de riego recomendada debe ser un número entero positivo.',
-        });
-        return;
-      }
-
-      wateringFrequencyDays = Number(wateringFrequencyInput);
-      if (!Number.isFinite(wateringFrequencyDays) || wateringFrequencyDays < 1) {
-        setErrors((prev) => ({
-          ...prev,
-          wateringFrequencyDays: 'Usá un número entero positivo.',
-        }));
-        showToast({
-          kind: 'warning',
-          title: 'Aviso',
-          message: 'La frecuencia de riego recomendada debe ser mayor que cero.',
-        });
-        return;
-      }
-    }
-
-    setErrors((prev) => ({ ...prev, wateringFrequencyDays: undefined }));
+    // We only use a single watering frequency field (`wateringIntervalDays`).
+    // If a Gemini suggestion existed it is copied into `wateringIntervalDays`
+    // via the effect above, so no separate validation is required here.
 
     const normalized: PlantDetailFormValues = {
       ...values,
       price: priceValidation.data,
       lastFertilized: nextLastFertilized === null ? values.lastFertilized : nextLastFertilized,
       lastWatered: nextLastWatered === null ? values.lastWatered : nextLastWatered,
+      // Use the visible interval as the canonical watering frequency for the plant
+      // (this comes from the user or was prefilled from Gemini). If it's not
+      // present, fall back to any existing suggested frequency.
       wateringIntervalDays:
         typeof wateringIntervalDays === 'number' ? String(wateringIntervalDays) : '',
       wateringFrequencyDays:
-        typeof wateringFrequencyDays === 'number' ? String(wateringFrequencyDays) : '',
-      wateringNotes: values.wateringNotes.trim(),
+        typeof wateringIntervalDays === 'number'
+          ? String(wateringIntervalDays)
+          : values.wateringFrequencyDays || '',
+      wateringNotes: values.wateringNotes.trim() || '',
     };
 
     setValues(normalized);
@@ -790,62 +776,20 @@ export function PlantDetailForm({
           placeholderTextColor={theme.colors.mutedForeground}
         />
         <Text style={formStyles.helperText}>Cada cuántos días se debe regar esta planta.</Text>
+        {values.wateringFrequencyDays ? (
+          <Text style={formStyles.helperText}>
+            Dato sugerido por Gemini: {values.wateringFrequencyDays} días{values.wateringNotes ? ` — ${values.wateringNotes}` : ''}.
+          </Text>
+        ) : null}
         {errors.wateringIntervalDays ? (
           <Text style={formStyles.errorText}>{errors.wateringIntervalDays}</Text>
         ) : null}
       </View>
 
-      <View style={formStyles.fieldGroup}>
-        <Text style={formStyles.label}>Frecuencia de riego recomendada</Text>
-        <TextInput
-          style={[
-            formStyles.input,
-            errors.wateringFrequencyDays ? { borderColor: theme.colors.destructive } : null,
-          ]}
-          value={values.wateringFrequencyDays}
-          onChangeText={(text) => {
-            setValues((prev) => ({ ...prev, wateringFrequencyDays: text }));
-            setErrors((prev) => ({ ...prev, wateringFrequencyDays: undefined }));
-          }}
-          onBlur={() => {
-            const trimmed = values.wateringFrequencyDays.trim();
-            if (!trimmed) {
-              setErrors((prev) => ({ ...prev, wateringFrequencyDays: undefined }));
-              return;
-            }
-
-            if (!/^\d+$/.test(trimmed) || Number(trimmed) < 1) {
-              setErrors((prev) => ({
-                ...prev,
-                wateringFrequencyDays: 'Usá un número entero positivo.',
-              }));
-              return;
-            }
-
-            setValues((prev) => ({ ...prev, wateringFrequencyDays: String(Number(trimmed)) }));
-            setErrors((prev) => ({ ...prev, wateringFrequencyDays: undefined }));
-          }}
-          keyboardType="number-pad"
-          placeholder="Ej. 7"
-          placeholderTextColor={theme.colors.mutedForeground}
-        />
-        <Text style={formStyles.helperText}>Dato sugerido por Gemini para la especie.</Text>
-        {errors.wateringFrequencyDays ? (
-          <Text style={formStyles.errorText}>{errors.wateringFrequencyDays}</Text>
-        ) : null}
-      </View>
-
-      <View style={formStyles.fieldGroup}>
-        <Text style={formStyles.label}>Notas de riego recomendadas</Text>
-        <TextInput
-          style={[formStyles.input, formStyles.textArea]}
-          multiline
-          value={values.wateringNotes}
-          onChangeText={(text) => handleChange('wateringNotes', text)}
-          placeholder="Ej. Regar menos en invierno"
-          placeholderTextColor={theme.colors.mutedForeground}
-        />
-      </View>
+      {/* The form shows a single 'Frecuencia de riego' field. Gemini suggestions
+          (if present on the plant) are copied into that field automatically.
+          The separate "recommended frequency" and notes fields were removed
+          to keep the UI simple as requested. */}
 
       <View style={formStyles.fieldGroup}>
         <CatalogSummaryCard
