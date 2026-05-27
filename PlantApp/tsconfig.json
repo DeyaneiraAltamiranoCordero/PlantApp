@@ -4,12 +4,16 @@
     "strict": true,
     "moduleResolution": "Bundler",
     "ignoreDeprecations": "5.0",
+    "skipLibCheck": true,
     "paths": {
       "@/*": [
         "./*"
       ]
     }
   },
+  "exclude": [
+    "node_modules"
+  ],
   "include": [
     "**/*.ts",
     "**/*.tsx",

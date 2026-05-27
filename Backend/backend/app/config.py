@@ -31,8 +31,7 @@ class Settings:
         if not service_account_path.is_absolute():
             service_account_path = (BASE_DIR / service_account_path).resolve()
         self.firebase_service_account_path = service_account_path
-        # Optional: explicit Firebase Storage bucket name (e.g. project-id.appspot.com)
-        self.firebase_storage_bucket = os.getenv("FIREBASE_STORAGE_BUCKET")
+        self.cloudinary_url = os.getenv("CLOUDINARY_URL")
 
 
 @lru_cache(maxsize=1)

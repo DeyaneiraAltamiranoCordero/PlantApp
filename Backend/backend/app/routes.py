@@ -1,7 +1,6 @@
 """Endpoints REST que exponen datos Firestore."""
 
 from calendar import monthrange
-from datetime import date, datetime, timedelta
 from typing import Any, Literal, Sequence
 
 from fastapi import APIRouter, Body, HTTPException, Query
@@ -26,9 +25,7 @@ from .services import (
     update_document,
     identify_plant_mock,
 )
-from .firebase import get_storage_bucket
-import base64
-import urllib.parse
+from .firebase import upload_image_to_cloudinary
 
 CollectionName = Literal[
     "users",
@@ -315,7 +312,7 @@ def _build_watering_calendar(plants: list[dict[str, Any]], month_key: str) -> di
 
 @router.post("/api/users/{user_id}/photo")
 def upload_user_photo(user_id: str, body: dict[str, str] = Body(...)) -> dict[str, str]:
-    """Upload a profile photo (base64) for the user to Firebase Storage and update the user profile.
+    """Upload a profile photo (base64) for the user to Cloudinary and update the user profile.
 
     Expects JSON: { "filename": "profile.jpg", "content": "data:image/jpeg;base64,..." }
     Returns: { "url": "https://..." }
@@ -325,35 +322,18 @@ def upload_user_photo(user_id: str, body: dict[str, str] = Body(...)) -> dict[st
     if not content:
         raise HTTPException(status_code=400, detail="Se requiere el campo 'content' con la imagen en base64.")
 
-    # Normalize base64 payload
-    if "," in content:
-        _, b64 = content.split(",", 1)
-    else:
-        b64 = content
-
     try:
-        data = base64.b64decode(b64)
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail="Contenido base64 invalido") from exc
-
-    # Obtain bucket and upload
-    try:
-        bucket = get_storage_bucket()
+        public_url = upload_image_to_cloudinary(
+            folder=f"plantapp/profiles/{user_id}",
+            filename=filename,
+            content=content,
+            public_id="profile",
+            overwrite=True,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    blob_path = f"profiles/{user_id}/{filename}"
-    blob = bucket.blob(blob_path)
-    try:
-        blob.upload_from_string(data, content_type="image/jpeg")
-        # Try to make public; if fails, fallback to signed URL pattern
-        try:
-            blob.make_public()
-            public_url = blob.public_url
-        except Exception:
-            public_url = f"https://firebasestorage.googleapis.com/v0/b/{bucket.name}/o/{urllib.parse.quote(blob_path, safe='')}?alt=media"
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Error subiendo a Storage: {str(exc)}") from exc
 
     # Update user profile
     try:
@@ -367,7 +347,7 @@ def upload_user_photo(user_id: str, body: dict[str, str] = Body(...)) -> dict[st
 
 @router.post("/api/users/{user_id}/plants/photo")
 def upload_plant_photo(user_id: str, body: dict[str, str] = Body(...)) -> dict[str, str]:
-    """Upload a plant photo (base64) to Firebase Storage and return its public URL.
+    """Upload a plant photo (base64) to Cloudinary and return its public URL.
 
     Expects JSON: { "filename": "plant.jpg", "content": "data:image/jpeg;base64,..." }
     Returns: { "url": "https://..." }
@@ -377,32 +357,18 @@ def upload_plant_photo(user_id: str, body: dict[str, str] = Body(...)) -> dict[s
     if not content:
         raise HTTPException(status_code=400, detail="Se requiere el campo 'content' con la imagen en base64.")
 
-    if "," in content:
-        _, b64 = content.split(",", 1)
-    else:
-        b64 = content
-
     try:
-        data = base64.b64decode(b64)
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail="Contenido base64 invalido") from exc
-
-    try:
-        bucket = get_storage_bucket()
+        public_url = upload_image_to_cloudinary(
+            folder=f"plantapp/plants/{user_id}",
+            filename=filename,
+            content=content,
+            public_id=filename.rsplit('.', maxsplit=1)[0],
+            overwrite=True,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    blob_path = f"plants/{user_id}/{filename}"
-    blob = bucket.blob(blob_path)
-    try:
-        blob.upload_from_string(data, content_type="image/jpeg")
-        try:
-            blob.make_public()
-            public_url = blob.public_url
-        except Exception:
-            public_url = f"https://firebasestorage.googleapis.com/v0/b/{bucket.name}/o/{urllib.parse.quote(blob_path, safe='')}?alt=media"
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Error subiendo a Storage: {str(exc)}") from exc
 
     return {"url": public_url}
 
