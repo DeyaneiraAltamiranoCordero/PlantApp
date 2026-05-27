@@ -184,15 +184,26 @@ export function useUserProfileController({ currentUser }: Params) {
         }
       }
 
-      let nextProfilePicture = profileImage;
+      let nextProfilePicture: string | undefined = profileImage?.startsWith('http') ? profileImage : undefined;
+
       if (pendingProfilePhotoBase64) {
-        nextProfilePicture = await uploadUserPhoto(
-          currentUser.uid,
-          `profile_${currentUser.uid}.jpg`,
-          pendingProfilePhotoBase64,
-        );
-        setProfileImage(nextProfilePicture);
-        setPendingProfilePhotoBase64(null);
+        try {
+          nextProfilePicture = await uploadUserPhoto(
+            currentUser.uid,
+            `profile_${currentUser.uid}.jpg`,
+            pendingProfilePhotoBase64,
+          );
+          setProfileImage(nextProfilePicture);
+          setPendingProfilePhotoBase64(null);
+        } catch (photoError) {
+          console.error('No se pudo subir la foto de perfil, guardamos el resto del perfil:', photoError);
+          showToast({
+            kind: 'warning',
+            title: 'Foto pendiente',
+            message: 'Guardamos tu perfil, pero no pudimos subir la foto todavía.',
+          });
+          nextProfilePicture = undefined;
+        }
       }
 
       await updateUserProfile(currentUser.uid, {
@@ -202,7 +213,7 @@ export function useUserProfileController({ currentUser }: Params) {
         nickname: values.nickname,
         ...(trimmedDescription ? { description: trimmedDescription } : {}),
         birthDate: trimmedBirthday,
-        profilePicture: nextProfilePicture,
+        ...(nextProfilePicture ? { profilePicture: nextProfilePicture } : {}),
         publicProfile: !isPrivate,
       });
 
