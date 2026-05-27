@@ -8,13 +8,13 @@ import * as SplashScreen from 'expo-splash-screen';
 
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
 import { PlantProvider } from './src/context/PlantContext';
+import { WateringNotificationsProvider } from './src/context/WateringNotificationsProvider';
 import { ToastProvider } from './src/context/ToastContext';
 import TabNavigator from "./src/navegation/barNavegation";
 import LoginScreen from './src/screens/login/Login';
 import UserProfileScreen from './src/screens/userProfile/UserProfile';
 import ScanResultScreen from './src/screens/scanner/ScanResultScreen';
 import { ThemeProvider, useTheme } from "./src/theme/desingSystem";
-import { useFonts, Nunito_400Regular, Nunito_600SemiBold, Nunito_700Bold } from '@expo-google-fonts/nunito';
 
 const Stack = createNativeStackNavigator();
 
@@ -22,16 +22,9 @@ function Navigation() {
   const themeContext = useTheme();
   const theme = themeContext?.theme || { colors: { background: '#ffffff', primary: '#2D5A27' } };
   const { loading: authLoading, currentUser } = useAuth();
-
-  const [fontsLoaded] = useFonts({
-    'Nunito': Nunito_400Regular,
-    'Nunito-SemiBold': Nunito_600SemiBold,
-    'Nunito-Bold': Nunito_700Bold,
-  });
-
-  const loading = authLoading || !fontsLoaded;
+  const loading = authLoading;
   
-  console.log('[App] State:', { authLoading, fontsLoaded, loading });
+  console.log('[App] State:', { authLoading, loading });
 
   React.useEffect(() => {
     console.log('[App] useEffect - loading changed:', loading);
@@ -46,7 +39,7 @@ function Navigation() {
     return (
       <View style={{ flex: 1, backgroundColor: '#ffffff', justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#2D5A27" />
-        <Text style={{ marginTop: 10 }}>Cargando... (Auth: {String(authLoading)}, Fonts: {String(fontsLoaded)})</Text>
+          <Text style={{ marginTop: 10 }}>Cargando... (Auth: {String(authLoading)})</Text>
       </View>
     );
   }
@@ -79,7 +72,9 @@ export default function App() {
         <ToastProvider>
           <AuthProvider>
             <PlantProvider>
-              <Navigation />
+              <WateringNotificationsProvider>
+                <Navigation />
+              </WateringNotificationsProvider>
             </PlantProvider>
           </AuthProvider>
         </ToastProvider>

@@ -1,7 +1,8 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
+import { Barometer } from 'expo-sensors';
 import { useAuth } from '../../context/AuthContext';
 import {
   getUserProfile,
@@ -26,6 +27,81 @@ const MONTH_NAMES = [
 ];
 
 const WEEK_DAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+
+type WeatherState = 'default' | 'sunny' | 'rain' | 'storm' | 'humid';
+
+const WEATHER_MESSAGES: Record<WeatherState, string> = {
+  default: 'Cuida tus plantas hoy 🌿',
+  sunny: 'Buen día para tus plantas ☀️',
+  rain: 'Se acerca lluvia, considera no regar hoy 🌧️',
+  storm: 'Tormenta en camino, protege tus plantas de exterior ⛈️',
+  humid: 'Clima húmedo, revisa el drenaje de tus plantas 💧',
+};
+
+const WEATHER_ICONS: Record<WeatherState, keyof typeof Feather.glyphMap> = {
+  default: 'leaf',
+  sunny: 'sun',
+  rain: 'cloud-rain',
+  storm: 'cloud-lightning',
+  humid: 'droplet',
+};
+
+const HIGH_PRESSURE_HPA = 1013;
+const LOW_PRESSURE_HPA = 1000;
+const STABLE_DELTA_HPA = 0.25;
+const MODERATE_DROP_HPA = -0.35;
+const SHARP_DROP_HPA = -1.1;
+
+const hexToRgba = (hexColor: string, alpha: number) => {
+  const normalized = hexColor.replace('#', '');
+
+  if (![3, 6].includes(normalized.length)) {
+    return hexColor;
+  }
+
+  const expanded = normalized.length === 3
+    ? normalized
+        .split('')
+        .map((character) => character + character)
+        .join('')
+    : normalized;
+
+  const red = Number.parseInt(expanded.slice(0, 2), 16);
+  const green = Number.parseInt(expanded.slice(2, 4), 16);
+  const blue = Number.parseInt(expanded.slice(4, 6), 16);
+
+  if ([red, green, blue].some((value) => Number.isNaN(value))) {
+    return hexColor;
+  }
+
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+};
+
+const getWeatherState = (pressure: number, previousPressure: number | null): WeatherState => {
+  if (previousPressure === null) {
+    return 'default';
+  }
+
+  const delta = pressure - previousPressure;
+
+  if (pressure > HIGH_PRESSURE_HPA && Math.abs(delta) <= STABLE_DELTA_HPA) {
+    return 'sunny';
+  }
+
+  if (pressure < LOW_PRESSURE_HPA && Math.abs(delta) <= STABLE_DELTA_HPA) {
+    return 'humid';
+  }
+
+  if (delta <= SHARP_DROP_HPA) {
+    return 'storm';
+  }
+
+  if (delta <= MODERATE_DROP_HPA) {
+    return 'rain';
+  }
+
+  return 'default';
+};
 
 const pad2 = (value: number) => String(value).padStart(2, '0');
 
@@ -166,10 +242,12 @@ export default function HomeScreen() {
   const { currentUser } = useAuth();
   const { theme } = useTheme();
   const styles = useMemo(() => createHomeStyles(theme), [theme]);
+  const previousPressureRef = useRef<number | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [calendar, setCalendar] = useState<ReturnType<typeof buildFallbackCalendar> | null>(null);
   const [selectedDate, setSelectedDate] = useState(todayIso());
+  const [weatherState, setWeatherState] = useState<WeatherState>('default');
 
   const monthKey = useMemo(() => monthKeyForToday(), []);
 
@@ -185,6 +263,46 @@ export default function HomeScreen() {
   const pendingPlants = useMemo(() => sortByDate(calendar?.pendingPlants ?? []), [calendar?.pendingPlants]);
   const monthGrid = useMemo(() => buildMonthGrid(monthKey), [monthKey]);
   const monthLabel = useMemo(() => formatMonthLabel(monthKey), [monthKey]);
+  const weatherUi = useMemo(() => {
+    const paletteByState: Record<WeatherState, { backgroundColor: string; borderColor: string; iconBackgroundColor: string; iconColor: string }> = {
+      default: {
+        backgroundColor: theme.colors.card,
+        borderColor: theme.colors.border,
+        iconBackgroundColor: hexToRgba(theme.colors.muted, 0.9),
+        iconColor: theme.colors.mutedForeground,
+      },
+      sunny: {
+        backgroundColor: hexToRgba(theme.colors.accent, 0.95),
+        borderColor: hexToRgba(theme.colors.primary, 0.14),
+        iconBackgroundColor: hexToRgba(theme.colors.primary, 0.14),
+        iconColor: theme.colors.primary,
+      },
+      rain: {
+        backgroundColor: hexToRgba(theme.colors.secondary, 0.72),
+        borderColor: hexToRgba(theme.colors.tertiary, 0.14),
+        iconBackgroundColor: hexToRgba(theme.colors.tertiary, 0.15),
+        iconColor: theme.colors.tertiary,
+      },
+      storm: {
+        backgroundColor: hexToRgba(theme.colors.warning, 0.18),
+        borderColor: hexToRgba(theme.colors.destructive, 0.18),
+        iconBackgroundColor: hexToRgba(theme.colors.destructive, 0.18),
+        iconColor: theme.colors.destructive,
+      },
+      humid: {
+        backgroundColor: hexToRgba(theme.colors.accent, 0.75),
+        borderColor: hexToRgba(theme.colors.primary, 0.12),
+        iconBackgroundColor: hexToRgba(theme.colors.primary, 0.12),
+        iconColor: theme.colors.primary,
+      },
+    };
+
+    return {
+      message: WEATHER_MESSAGES[weatherState],
+      iconName: WEATHER_ICONS[weatherState],
+      ...paletteByState[weatherState],
+    };
+  }, [theme, weatherState]);
 
   const displayName = useMemo(() => {
     const fromAuth = currentUser?.displayName?.trim();
@@ -213,6 +331,44 @@ export default function HomeScreen() {
     }, [loadSummary])
   );
 
+  useEffect(() => {
+    let isActive = true;
+    let subscription: { remove: () => void } | null = null;
+
+    const startBarometer = async () => {
+      try {
+        const isAvailable = await Barometer.isAvailableAsync();
+
+        if (!isActive || !isAvailable) {
+          return;
+        }
+
+        Barometer.setUpdateInterval(2500);
+        subscription = Barometer.addListener(({ pressure }) => {
+          if (!isActive) {
+            return;
+          }
+
+          const nextState = getWeatherState(pressure, previousPressureRef.current);
+          previousPressureRef.current = pressure;
+          setWeatherState(nextState);
+        });
+      } catch (error) {
+        if (__DEV__) {
+          console.warn('No se pudo iniciar el barómetro:', error);
+        }
+      }
+    };
+
+    startBarometer();
+
+    return () => {
+      isActive = false;
+      previousPressureRef.current = null;
+      subscription?.remove();
+    };
+  }, []);
+
   return (
     <ScrollView
       style={styles.container}
@@ -231,6 +387,21 @@ export default function HomeScreen() {
         <Text style={styles.greeting}>Hola,</Text>
         <Text style={styles.userName}>{displayName}</Text>
         <Text style={styles.sectionSubtitle}>Calendario mensual de riegos</Text>
+      </View>
+
+      <View
+        style={[
+          styles.weatherBanner,
+          {
+            backgroundColor: weatherUi.backgroundColor,
+            borderColor: weatherUi.borderColor,
+          },
+        ]}
+      >
+        <View style={[styles.weatherIconWrap, { backgroundColor: weatherUi.iconBackgroundColor }]}>
+          <Feather name={weatherUi.iconName} size={16} color={weatherUi.iconColor} />
+        </View>
+        <Text style={styles.weatherMessage}>{weatherUi.message}</Text>
       </View>
 
       <View style={styles.section}>

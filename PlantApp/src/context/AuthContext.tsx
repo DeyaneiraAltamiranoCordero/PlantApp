@@ -165,6 +165,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     console.log('[AuthContext] Setting up onAuthStateChanged');
     const auth = getAuth();
+    const bootstrapTimeout = setTimeout(() => {
+      setLoading((currentLoading) => {
+        if (currentLoading) {
+          console.warn('[AuthContext] Auth bootstrap timed out, releasing startup loading state');
+          return false;
+        }
+        return currentLoading;
+      });
+    }, 3000);
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       console.log('[AuthContext] onAuthStateChanged fired. User:', user ? user.uid : 'null');
       try {
@@ -182,10 +192,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } finally {
         console.log('[AuthContext] Setting loading to false');
         setLoading(false);
+        clearTimeout(bootstrapTimeout);
       }
     });
     return () => {
       console.log('[AuthContext] Unsubscribing from auth state changes');
+      clearTimeout(bootstrapTimeout);
       unsubscribe();
     };
   }, [isWeb]);

@@ -160,7 +160,7 @@ export default function LoginScreen() {
 
       {loading && (
         <View style={styles.loadingWrapper}>
-          <ActivityIndicator size="large" color={styles.title.color} />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
           <Text style={styles.loadingText}>Preparando tu experiencia...</Text>
         </View>
       )}

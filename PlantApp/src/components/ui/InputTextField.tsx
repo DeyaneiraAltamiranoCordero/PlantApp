@@ -93,7 +93,7 @@ export function InputTextField({
     <View style={styles.fieldContainer}>
       {(label || iconName) && (
         <View style={styles.labelContainer}>
-          {iconName && <Feather name={iconName} size={16} color={styles.icon.color} />}
+          {iconName && <Feather name={iconName} size={16} color={isDark ? theme.colors.secondaryForeground : theme.colors.primary} />}
           {label ? (
             <Text style={styles.label}>
               {label}

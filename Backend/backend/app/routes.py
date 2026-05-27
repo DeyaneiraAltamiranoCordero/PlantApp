@@ -1,6 +1,7 @@
 """Endpoints REST que exponen datos Firestore."""
 
 from calendar import monthrange
+from datetime import date, datetime, timedelta
 from typing import Any, Literal, Sequence
 
 from fastapi import APIRouter, Body, HTTPException, Query
