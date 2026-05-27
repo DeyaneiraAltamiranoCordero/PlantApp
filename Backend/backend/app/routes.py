@@ -200,6 +200,31 @@ def _normalize_plant_document(plant: dict[str, Any]) -> dict[str, Any]:
     """Return a normalized copy of a plant document for API responses."""
 
     plant_copy = plant.copy()
+
+    # Keep response model-compatible defaults even when old/incomplete docs exist.
+    plant_copy.setdefault("userId", "")
+    plant_copy.setdefault("name", "")
+    plant_copy.setdefault("categoryId", "")
+    plant_copy.setdefault("age", "")
+    plant_copy.setdefault("price", 0.0)
+    plant_copy.setdefault("growthTime", "")
+    plant_copy.setdefault("height", "")
+    plant_copy.setdefault("isFavorite", False)
+    plant_copy.setdefault("toxic", False)
+    plant_copy.setdefault("flowering", "")
+    plant_copy.setdefault("status", "")
+    plant_copy.setdefault("lightPreference", "")
+    plant_copy.setdefault("originLocality", "")
+    plant_copy.setdefault("temperature", "")
+    plant_copy.setdefault("fertilizerType", "")
+    plant_copy.setdefault("lastFertilized", "")
+    plant_copy.setdefault("lastWatered", "")
+
+    if not isinstance(plant_copy.get("careTypes"), list):
+        plant_copy["careTypes"] = []
+    if not isinstance(plant_copy.get("pests"), list):
+        plant_copy["pests"] = []
+
     frequency_value = plant_copy.get("wateringFrequencyDays")
     if frequency_value in (None, ""):
         frequency_value = plant_copy.get("wateringIntervalDays")
@@ -213,6 +238,36 @@ def _normalize_plant_document(plant: dict[str, Any]) -> dict[str, Any]:
         normalized_frequency,
     )
     return plant_copy
+
+
+def _extract_relation_ids(raw_values: Any) -> list[str]:
+    """Normalize relation lists that may contain IDs or embedded objects."""
+
+    if not isinstance(raw_values, list):
+        return []
+
+    ids: list[str] = []
+    for item in raw_values:
+        if isinstance(item, str) and item.strip():
+            ids.append(item.strip())
+            continue
+        if isinstance(item, dict):
+            nested_id = item.get("id")
+            if isinstance(nested_id, str) and nested_id.strip():
+                ids.append(nested_id.strip())
+    return ids
+
+
+def _extract_category_id(raw_category: Any) -> str:
+    """Normalize category relation from either string ID or embedded object."""
+
+    if isinstance(raw_category, str):
+        return raw_category.strip()
+    if isinstance(raw_category, dict):
+        nested_id = raw_category.get("id")
+        if isinstance(nested_id, str):
+            return nested_id.strip()
+    return ""
 
 
 def _prepare_plant_payload(payload: dict[str, Any], *, merge: bool, existing: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -385,9 +440,13 @@ def _populate_plants_with_relations(plants: list[dict[str, Any]]) -> list[dict[s
     category_ids: set[str] = set()
 
     for plant in plants:
-        care_type_ids.update(filter(None, plant.get("careTypes", [])))
-        pest_ids.update(filter(None, plant.get("pests", [])))
-        category_id = plant.get("categoryId")
+        normalized_plant = _normalize_plant_document(plant)
+        plant_care_type_ids = _extract_relation_ids(normalized_plant.get("careTypes"))
+        plant_pest_ids = _extract_relation_ids(normalized_plant.get("pests"))
+        care_type_ids.update(plant_care_type_ids)
+        pest_ids.update(plant_pest_ids)
+
+        category_id = _extract_category_id(normalized_plant.get("categoryId"))
         if category_id:
             category_ids.add(category_id)
 
@@ -402,22 +461,27 @@ def _populate_plants_with_relations(plants: list[dict[str, Any]]) -> list[dict[s
     enriched: list[dict[str, Any]] = []
     for plant in plants:
         plant_copy = _normalize_plant_document(plant)
+        care_type_id_list = _extract_relation_ids(plant_copy.get("careTypes"))
+        pest_id_list = _extract_relation_ids(plant_copy.get("pests"))
+
         care_type_refs = [
             care_type_map[identifier]
-            for identifier in plant_copy.get("careTypes", [])
+            for identifier in care_type_id_list
             if identifier in care_type_map
         ]
         pest_refs = [
             pest_map[identifier]
-            for identifier in plant_copy.get("pests", [])
+            for identifier in pest_id_list
             if identifier in pest_map
         ]
 
-        plant_copy["careTypeIds"] = plant_copy.get("careTypes", [])
-        plant_copy["pestIds"] = plant_copy.get("pests", [])
+        plant_copy["careTypeIds"] = care_type_id_list
+        plant_copy["pestIds"] = pest_id_list
         plant_copy["careTypes"] = care_type_refs
         plant_copy["pests"] = pest_refs
-        plant_copy["category"] = category_map.get(plant_copy.get("categoryId"))
+        normalized_category_id = _extract_category_id(plant_copy.get("categoryId"))
+        plant_copy["categoryId"] = normalized_category_id
+        plant_copy["category"] = category_map.get(normalized_category_id)
 
         enriched.append(plant_copy)
 
