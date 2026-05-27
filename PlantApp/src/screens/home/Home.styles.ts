@@ -12,35 +12,13 @@ export const createHomeStyles = (theme: AppTheme) =>
         },
         header: {
             paddingHorizontal: theme.spacing.xl,
+            paddingTop: theme.spacing.lg,
             paddingBottom: theme.spacing.md,
         },
-        headerTopRow: {
-            flexDirection: 'row',
-            alignItems: 'flex-start',
-            justifyContent: 'space-between',
-            gap: theme.spacing.md,
-        },
-        headerTextBlock: {
-            flex: 1,
-            paddingRight: theme.spacing.sm,
-        },
-        greetingLine: {
-            fontSize: theme.typography.size.xl + 3,
-            color: theme.colors.foreground,
-            fontFamily: theme.typography.fontFamily.bold,
-            fontWeight: theme.typography.weight.bold,
-        },
-        headerMessage: {
-            marginTop: theme.spacing.xs,
-            fontSize: theme.typography.size.base,
+        greeting: {
+            fontSize: theme.typography.size.lg,
             color: theme.colors.mutedForeground,
             fontFamily: theme.typography.fontFamily.default,
-            lineHeight: 22,
-        },
-        headerLogo: {
-            width: 30,
-            height: 30,
-            marginTop: 2,
         },
         userName: {
             fontSize: theme.typography.size.xxl,
@@ -78,38 +56,15 @@ export const createHomeStyles = (theme: AppTheme) =>
         },
         sectionHeader: {
             flexDirection: "row",
-            alignItems: "flex-start",
+            justifyContent: "space-between",
+            alignItems: "center",
             marginBottom: theme.spacing.lg,
-        },
-        monthHeaderContent: {
-            flex: 1,
-            alignItems: 'center',
-            paddingHorizontal: theme.spacing.sm,
-        },
-        monthNavButton: {
-            width: 34,
-            height: 34,
-            borderRadius: theme.radius.full,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: theme.colors.card,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
         },
         sectionTitle: {
             fontSize: theme.typography.size.xl,
             fontWeight: theme.typography.weight.bold,
             color: theme.colors.foreground,
             fontFamily: theme.typography.fontFamily.bold,
-        },
-        monthLabel: {
-            fontSize: theme.typography.size.xl + 2,
-            fontWeight: theme.typography.weight.bold,
-            color: theme.colors.foreground,
-            fontFamily: theme.typography.fontFamily.bold,
-            textTransform: 'uppercase',
-            letterSpacing: 0.6,
-            textAlign: 'center',
         },
         sectionSubtitle: {
             fontSize: theme.typography.size.sm,
@@ -148,6 +103,22 @@ export const createHomeStyles = (theme: AppTheme) =>
             flex: 1,
             fontSize: theme.typography.size.sm,
             lineHeight: 19,
+            color: theme.colors.foreground,
+            fontFamily: theme.typography.fontFamily.semibold,
+        },
+        calendarBadge: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: theme.spacing.xs,
+            paddingHorizontal: theme.spacing.md,
+            paddingVertical: theme.spacing.xs,
+            borderRadius: theme.radius.full,
+            backgroundColor: theme.colors.card,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+        },
+        calendarBadgeText: {
+            fontSize: theme.typography.size.sm,
             color: theme.colors.foreground,
             fontFamily: theme.typography.fontFamily.semibold,
         },
@@ -215,22 +186,8 @@ export const createHomeStyles = (theme: AppTheme) =>
             justifyContent: 'center',
             marginBottom: theme.spacing.xs,
         },
-        /* keep cell background neutral; selected indicator is a circular number */
-        calendarCellSelected: {},
-        calendarDayCircle: {
-            width: 36,
-            height: 36,
-            borderRadius: 36,
-            alignItems: 'center',
-            justifyContent: 'center',
-        },
-        calendarDayCircleSelected: {
-            width: 36,
-            height: 36,
-            borderRadius: 36,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: theme.colors.tertiary,
+        calendarCellSelected: {
+            backgroundColor: theme.colors.primary,
         },
         calendarCellToday: {
             borderWidth: 1,
@@ -243,7 +200,6 @@ export const createHomeStyles = (theme: AppTheme) =>
         },
         calendarDayNumberSelected: {
             color: theme.colors.primaryForeground,
-            fontWeight: theme.typography.weight.bold,
         },
         calendarDot: {
             marginTop: theme.spacing.xs,
@@ -252,22 +208,10 @@ export const createHomeStyles = (theme: AppTheme) =>
             borderRadius: 7,
             backgroundColor: theme.colors.primary,
         },
-        calendarDotWrap: {
-            marginTop: theme.spacing.xs,
-            width: 14,
-            height: 14,
-            alignItems: 'center',
-            justifyContent: 'center',
-        },
-        calendarDotEmoji: {
-            fontSize: 12,
-            lineHeight: 14,
-            textAlign: 'center',
-        },
         calendarDotPlaceholder: {
             marginTop: theme.spacing.xs,
-            width: 14,
-            height: 14,
+            width: 7,
+            height: 7,
         },
         listStack: {
             gap: theme.spacing.md,
@@ -311,27 +255,11 @@ export const createHomeStyles = (theme: AppTheme) =>
             color: theme.colors.foreground,
             fontFamily: theme.typography.fontFamily.semibold,
         },
-        reminderMetaRow: {
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            gap: theme.spacing.sm,
-            marginTop: 2,
-        },
         reminderSubtitle: {
+            marginTop: 2,
             fontSize: theme.typography.size.sm,
             color: theme.colors.mutedForeground,
             fontFamily: theme.typography.fontFamily.default,
-        },
-        reminderWaterRow: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 4,
-        },
-        reminderWaterText: {
-            fontSize: theme.typography.size.sm,
-            color: theme.colors.foreground,
-            fontFamily: theme.typography.fontFamily.semibold,
         },
         reminderMeta: {
             marginTop: theme.spacing.xs,
