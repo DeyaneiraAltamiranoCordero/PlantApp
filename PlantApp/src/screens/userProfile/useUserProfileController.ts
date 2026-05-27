@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Alert } from 'react-native';
 import { useForm, useWatch } from 'react-hook-form';
 
-import { ApiError, getUserProfile, updateUserProfile } from '../../context/services/api';
+import { ApiError, getUserProfile, updateUserProfile, uploadUserPhoto } from '../../context/services/api';
 import { ISODateStringSchema } from '../../context/services/schemas';
 import { useToast } from '../../context/ToastContext';
 import type { PersonalInfoFormValues } from '../../components/screenUserProfile/PersonalInfoForm';
@@ -38,6 +38,7 @@ export function useUserProfileController({ currentUser }: Params) {
   const watchedNickname = useWatch({ control, name: 'nickname' });
 
   const [profileImage, setProfileImage] = useState('');
+  const [pendingProfilePhotoBase64, setPendingProfilePhotoBase64] = useState<string | null>(null);
   const [plantsCount, setPlantsCount] = useState(0);
   const [streakCount, setStreakCount] = useState(0);
   const [friendsCount, setFriendsCount] = useState(0);
@@ -68,6 +69,7 @@ export function useUserProfileController({ currentUser }: Params) {
     });
 
     setProfileImage(currentUser.photoURL ?? '');
+    setPendingProfilePhotoBase64(null);
     setPlantsCount(0);
     setStreakCount(0);
     setFriendsCount(0);
@@ -112,6 +114,7 @@ export function useUserProfileController({ currentUser }: Params) {
         });
 
         setProfileImage(profile.user.profilePicture || '');
+        setPendingProfilePhotoBase64(null);
 
         const plantsLength = Array.isArray(profile.plants) ? profile.plants.length : undefined;
         setPlantsCount(plantsLength ?? stats.plantsCount ?? 0);
@@ -181,6 +184,17 @@ export function useUserProfileController({ currentUser }: Params) {
         }
       }
 
+      let nextProfilePicture = profileImage;
+      if (pendingProfilePhotoBase64) {
+        nextProfilePicture = await uploadUserPhoto(
+          currentUser.uid,
+          `profile_${currentUser.uid}.jpg`,
+          pendingProfilePhotoBase64,
+        );
+        setProfileImage(nextProfilePicture);
+        setPendingProfilePhotoBase64(null);
+      }
+
       await updateUserProfile(currentUser.uid, {
         name: values.name,
         lastName: values.lastName,
@@ -188,7 +202,7 @@ export function useUserProfileController({ currentUser }: Params) {
         nickname: values.nickname,
         ...(trimmedDescription ? { description: trimmedDescription } : {}),
         birthDate: trimmedBirthday,
-        profilePicture: profileImage,
+        profilePicture: nextProfilePicture,
         publicProfile: !isPrivate,
       });
 
@@ -217,6 +231,8 @@ export function useUserProfileController({ currentUser }: Params) {
     watchedNickname,
     profileImage,
     setProfileImage,
+    pendingProfilePhotoBase64,
+    setPendingProfilePhotoBase64,
     plantsCount,
     streakCount,
     friendsCount,
