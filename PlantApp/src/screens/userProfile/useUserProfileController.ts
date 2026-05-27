@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 import { useForm, useWatch } from 'react-hook-form';
 
 import { ApiError, getUserProfile, updateUserProfile, uploadUserPhoto } from '../../context/services/api';
 import { ISODateStringSchema } from '../../context/services/schemas';
 import { useToast } from '../../context/ToastContext';
+import { usePlants } from '../../context/PlantContext';
 import type { PersonalInfoFormValues } from '../../components/screenUserProfile/PersonalInfoForm';
 
 type Params = {
@@ -20,6 +21,7 @@ type Params = {
 };
 
 export function useUserProfileController({ currentUser }: Params) {
+  const { plants, loadPlants } = usePlants();
   const { control, handleSubmit, reset, setError } = useForm<PersonalInfoFormValues>({
     defaultValues: {
       name: '',
@@ -80,6 +82,10 @@ export function useUserProfileController({ currentUser }: Params) {
 
   useEffect(() => {
     if (!currentUser) return;
+
+    void loadPlants().catch((error) => {
+      console.error('Error al cargar plantas para el perfil:', error);
+    });
 
     let isMounted = true;
 
@@ -161,6 +167,29 @@ export function useUserProfileController({ currentUser }: Params) {
       isMounted = false;
     };
   }, [currentUser, reset]);
+
+  useEffect(() => {
+    const uniqueStrings = (items: Array<string | undefined | null>) => {
+      const normalized = items
+        .map((item) => item?.trim())
+        .filter((item): item is string => Boolean(item));
+      return Array.from(new Set(normalized));
+    };
+
+    const nextFavoritePlants = uniqueStrings(
+      plants.filter((plant) => Boolean(plant.isFavorite)).map((plant) => plant.name),
+    );
+    const nextCategories = uniqueStrings(
+      plants.map((plant) => plant.categoryName),
+    );
+
+    if (nextFavoritePlants.length > 0) {
+      setFavoritePlants(nextFavoritePlants);
+    }
+    if (nextCategories.length > 0) {
+      setPlantCategories(nextCategories);
+    }
+  }, [plants]);
 
   const onSubmit = async (values: PersonalInfoFormValues) => {
     if (!currentUser) return;
