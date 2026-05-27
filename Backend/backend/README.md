@@ -61,3 +61,5 @@ Desde la raiz del proyecto:
 - Si la service account no tiene permisos, la API devolvera errores al consultar Firestore.
 - El endpoint `GET /api/collections/{collection}` es util para desarrollo interno; cuando saques esta API del proyecto conviene restringirlo o eliminarlo.
 - Todas las operaciones de escritura (`POST/PUT/PATCH/DELETE`) esperan/retornan JSON plano; si el body incluye `id`, se respeta, de lo contrario se genera uno nuevo.
+- En `plants`, el campo canónico de riego es `wateringFrequencyDays`; el backend sigue aceptando `wateringIntervalDays` como alias de compatibilidad y calcula `nextWateringDate` automaticamente a partir de `lastWatered`.
+- `wateringNotes` es opcional y se guarda tal cual para observaciones como ajustes estacionales.

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Modal, ScrollView, TouchableOpacity, View, Text, TextInput, StyleSheet } from 'react-native';
+import { Modal, Platform, ScrollView, TouchableOpacity, View, Text, TextInput, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Category, Plant } from '../../context/services/api';
 import { Button } from '../ui/Button';
@@ -85,6 +85,8 @@ export type PlantDetailFormValues = {
   lastFertilized: string;
   lastWatered: string;
   wateringIntervalDays: string;
+  wateringFrequencyDays: string;
+  wateringNotes: string;
   careTypes: string;
 };
 
@@ -96,6 +98,7 @@ interface PlantDetailFormProps {
   careTypesCount: number;
   onOpenCareTypes: () => void;
   onSave: (values: PlantDetailFormValues) => Promise<void>;
+  onDeletePress?: () => void;
   loading?: boolean;
 }
 
@@ -107,6 +110,7 @@ export function PlantDetailForm({
   careTypesCount,
   onOpenCareTypes,
   onSave,
+  onDeletePress,
   loading,
 }: PlantDetailFormProps) {
   const { theme } = usePlantCareStyles();
@@ -114,7 +118,7 @@ export function PlantDetailForm({
   const formStyles = useMemo(() => createFormStyles(theme), [theme]);
   const [isCategoryPickerVisible, setIsCategoryPickerVisible] = useState(false);
   const [isCategorySelectOpen, setIsCategorySelectOpen] = useState(false);
-  const [errors, setErrors] = useState<Partial<Record<'price' | 'lastFertilized' | 'lastWatered' | 'wateringIntervalDays', string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<'price' | 'lastFertilized' | 'lastWatered' | 'wateringIntervalDays' | 'wateringFrequencyDays', string>>>({});
 
   const initialCategoryIds =
     Array.isArray(plant.categoryIds) && plant.categoryIds.length > 0
@@ -153,6 +157,11 @@ export function PlantDetailForm({
       typeof plant.wateringIntervalDays === 'number' && Number.isFinite(plant.wateringIntervalDays)
         ? String(plant.wateringIntervalDays)
         : '',
+    wateringFrequencyDays:
+      typeof plant.wateringFrequencyDays === 'number' && Number.isFinite(plant.wateringFrequencyDays)
+        ? String(plant.wateringFrequencyDays)
+        : '',
+    wateringNotes: plant.wateringNotes || '',
     careTypes: initialCareTypeIds.join(', '),
   });
 
@@ -299,6 +308,39 @@ export function PlantDetailForm({
 
     setErrors((prev) => ({ ...prev, wateringIntervalDays: undefined }));
 
+    const wateringFrequencyInput = values.wateringFrequencyDays.trim();
+    let wateringFrequencyDays: number | undefined;
+    if (wateringFrequencyInput) {
+      if (!/^\d+$/.test(wateringFrequencyInput)) {
+        setErrors((prev) => ({
+          ...prev,
+          wateringFrequencyDays: 'Usá un número entero positivo.',
+        }));
+        showToast({
+          kind: 'warning',
+          title: 'Aviso',
+          message: 'La frecuencia de riego recomendada debe ser un número entero positivo.',
+        });
+        return;
+      }
+
+      wateringFrequencyDays = Number(wateringFrequencyInput);
+      if (!Number.isFinite(wateringFrequencyDays) || wateringFrequencyDays < 1) {
+        setErrors((prev) => ({
+          ...prev,
+          wateringFrequencyDays: 'Usá un número entero positivo.',
+        }));
+        showToast({
+          kind: 'warning',
+          title: 'Aviso',
+          message: 'La frecuencia de riego recomendada debe ser mayor que cero.',
+        });
+        return;
+      }
+    }
+
+    setErrors((prev) => ({ ...prev, wateringFrequencyDays: undefined }));
+
     const normalized: PlantDetailFormValues = {
       ...values,
       price: priceValidation.data,
@@ -306,6 +348,9 @@ export function PlantDetailForm({
       lastWatered: nextLastWatered === null ? values.lastWatered : nextLastWatered,
       wateringIntervalDays:
         typeof wateringIntervalDays === 'number' ? String(wateringIntervalDays) : '',
+      wateringFrequencyDays:
+        typeof wateringFrequencyDays === 'number' ? String(wateringFrequencyDays) : '',
+      wateringNotes: values.wateringNotes.trim(),
     };
 
     setValues(normalized);
@@ -751,6 +796,58 @@ export function PlantDetailForm({
       </View>
 
       <View style={formStyles.fieldGroup}>
+        <Text style={formStyles.label}>Frecuencia de riego recomendada</Text>
+        <TextInput
+          style={[
+            formStyles.input,
+            errors.wateringFrequencyDays ? { borderColor: theme.colors.destructive } : null,
+          ]}
+          value={values.wateringFrequencyDays}
+          onChangeText={(text) => {
+            setValues((prev) => ({ ...prev, wateringFrequencyDays: text }));
+            setErrors((prev) => ({ ...prev, wateringFrequencyDays: undefined }));
+          }}
+          onBlur={() => {
+            const trimmed = values.wateringFrequencyDays.trim();
+            if (!trimmed) {
+              setErrors((prev) => ({ ...prev, wateringFrequencyDays: undefined }));
+              return;
+            }
+
+            if (!/^\d+$/.test(trimmed) || Number(trimmed) < 1) {
+              setErrors((prev) => ({
+                ...prev,
+                wateringFrequencyDays: 'Usá un número entero positivo.',
+              }));
+              return;
+            }
+
+            setValues((prev) => ({ ...prev, wateringFrequencyDays: String(Number(trimmed)) }));
+            setErrors((prev) => ({ ...prev, wateringFrequencyDays: undefined }));
+          }}
+          keyboardType="number-pad"
+          placeholder="Ej. 7"
+          placeholderTextColor={theme.colors.mutedForeground}
+        />
+        <Text style={formStyles.helperText}>Dato sugerido por Gemini para la especie.</Text>
+        {errors.wateringFrequencyDays ? (
+          <Text style={formStyles.errorText}>{errors.wateringFrequencyDays}</Text>
+        ) : null}
+      </View>
+
+      <View style={formStyles.fieldGroup}>
+        <Text style={formStyles.label}>Notas de riego recomendadas</Text>
+        <TextInput
+          style={[formStyles.input, formStyles.textArea]}
+          multiline
+          value={values.wateringNotes}
+          onChangeText={(text) => handleChange('wateringNotes', text)}
+          placeholder="Ej. Regar menos en invierno"
+          placeholderTextColor={theme.colors.mutedForeground}
+        />
+      </View>
+
+      <View style={formStyles.fieldGroup}>
         <CatalogSummaryCard
           style={{ marginTop: theme.spacing.md }}
           title="Tipos cuidados"
@@ -784,13 +881,47 @@ export function PlantDetailForm({
         addA11yLabel="Agregar plaga"
       />
 
-      <Button
-        title="Guardar cambios"
-        onPress={handleSubmit}
-        loading={loading}
-        disabled={loading}
-        style={{ marginTop: theme.spacing.xl }}
-      />
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md, marginTop: theme.spacing.xl }}>
+        <View style={{ flex: 1 }}>
+          <Button
+            title="Guardar cambios"
+            onPress={handleSubmit}
+            loading={loading}
+            disabled={loading}
+          />
+        </View>
+
+        {onDeletePress ? (
+          <TouchableOpacity
+            onPress={onDeletePress}
+            disabled={loading}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: theme.radius.full,
+              backgroundColor: theme.colors.destructive,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: loading ? 0.7 : 1,
+              ...Platform.select({
+                ios: {
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.12,
+                  shadowRadius: 3,
+                },
+                android: {
+                  elevation: 2,
+                },
+              }),
+            }}
+            accessibilityLabel="Eliminar planta"
+            accessibilityRole="button"
+          >
+            <Feather name="trash-2" size={18} color="white" />
+          </TouchableOpacity>
+        ) : null}
+      </View>
     </View>
   );
 }

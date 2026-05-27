@@ -149,40 +149,72 @@ def _format_date_value(raw_value: date | None) -> str | None:
     return raw_value.isoformat()
 
 
-def _normalize_watering_interval(raw_value: Any) -> int | None:
-    """Validate and convert the watering interval into a positive integer."""
+def _normalize_watering_frequency(raw_value: Any) -> int | None:
+    """Validate and convert the watering frequency into a positive integer."""
 
     if raw_value in (None, ""):
         return None
 
     if isinstance(raw_value, bool):
-        raise HTTPException(status_code=400, detail="La frecuencia de riego debe ser un número entero positivo.")
+        raise HTTPException(
+            status_code=400,
+            detail="La frecuencia de riego debe ser un número entero positivo.",
+        )
 
     try:
-        interval = int(raw_value)
+        frequency = int(raw_value)
     except (TypeError, ValueError) as exc:
         raise HTTPException(
             status_code=400,
             detail="La frecuencia de riego debe ser un número entero positivo.",
         ) from exc
 
-    if interval < 1:
+    if frequency < 1:
         raise HTTPException(status_code=400, detail="La frecuencia de riego debe ser mayor que cero.")
 
-    return interval
+    return frequency
 
 
-def _calculate_next_watering_date(last_watered: Any, watering_interval_days: Any) -> str | None:
-    """Derive the next watering date from the last watering and interval."""
+def _normalize_watering_notes(raw_value: Any) -> str | None:
+    """Normalize optional watering notes into a trimmed string."""
 
-    interval = _normalize_watering_interval(watering_interval_days)
-    watered_on = _parse_date_value(last_watered)
-
-    if interval is None or watered_on is None:
+    if raw_value in (None, ""):
         return None
 
-    next_date = watered_on + timedelta(days=interval)
+    notes = str(raw_value).strip()
+    return notes or None
+
+
+def _calculate_next_watering_date(last_watered: Any, watering_frequency_days: Any) -> str | None:
+    """Derive the next watering date from the last watering and interval."""
+
+    frequency = _normalize_watering_frequency(watering_frequency_days)
+    watered_on = _parse_date_value(last_watered)
+
+    if frequency is None or watered_on is None:
+        return None
+
+    next_date = watered_on + timedelta(days=frequency)
     return _format_date_value(next_date)
+
+
+def _normalize_plant_document(plant: dict[str, Any]) -> dict[str, Any]:
+    """Return a normalized copy of a plant document for API responses."""
+
+    plant_copy = plant.copy()
+    frequency_value = plant_copy.get("wateringFrequencyDays")
+    if frequency_value in (None, ""):
+        frequency_value = plant_copy.get("wateringIntervalDays")
+
+    normalized_frequency = _normalize_watering_frequency(frequency_value)
+    plant_copy["wateringFrequencyDays"] = normalized_frequency
+    plant_copy["wateringIntervalDays"] = normalized_frequency
+    plant_copy["wateringNotes"] = _normalize_watering_notes(plant_copy.get("wateringNotes"))
+    plant_copy["nextWateringDate"] = _calculate_next_watering_date(
+        plant_copy.get("lastWatered"),
+        normalized_frequency,
+    )
+    return plant_copy
 
 
 def _prepare_plant_payload(payload: dict[str, Any], *, merge: bool, existing: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -193,15 +225,26 @@ def _prepare_plant_payload(payload: dict[str, Any], *, merge: bool, existing: di
 
     normalized_payload = payload.copy()
 
-    if "wateringIntervalDays" in merged_payload:
-        normalized_payload["wateringIntervalDays"] = _normalize_watering_interval(
-            merged_payload.get("wateringIntervalDays")
+    if "wateringFrequencyDays" in merged_payload or "wateringIntervalDays" in merged_payload:
+        normalized_frequency = _normalize_watering_frequency(
+            merged_payload.get("wateringFrequencyDays", merged_payload.get("wateringIntervalDays"))
+        )
+        normalized_payload["wateringFrequencyDays"] = normalized_frequency
+        normalized_payload["wateringIntervalDays"] = normalized_frequency
+
+    if "wateringNotes" in merged_payload:
+        normalized_payload["wateringNotes"] = _normalize_watering_notes(
+            merged_payload.get("wateringNotes")
         )
 
-    if "lastWatered" in merged_payload:
+    if (
+        "lastWatered" in merged_payload
+        or "wateringFrequencyDays" in merged_payload
+        or "wateringIntervalDays" in merged_payload
+    ):
         normalized_payload["nextWateringDate"] = _calculate_next_watering_date(
             merged_payload.get("lastWatered"),
-            merged_payload.get("wateringIntervalDays"),
+            merged_payload.get("wateringFrequencyDays", merged_payload.get("wateringIntervalDays")),
         )
 
     return normalized_payload
@@ -210,15 +253,8 @@ def _prepare_plant_payload(payload: dict[str, Any], *, merge: bool, existing: di
 def _decorate_plant_for_reminders(plant: dict[str, Any], *, today: date | None = None) -> dict[str, Any]:
     """Add derived reminder fields to a plant document copy."""
 
-    plant_copy = plant.copy()
-    next_watering_date = _calculate_next_watering_date(
-        plant_copy.get("lastWatered"),
-        plant_copy.get("wateringIntervalDays"),
-    )
-    plant_copy["nextWateringDate"] = next_watering_date
-    plant_copy["wateringIntervalDays"] = _normalize_watering_interval(
-        plant_copy.get("wateringIntervalDays")
-    )
+    plant_copy = _normalize_plant_document(plant)
+    next_watering_date = plant_copy.get("nextWateringDate")
 
     due_date = _parse_date_value(next_watering_date)
     if today is None:
@@ -329,6 +365,48 @@ def upload_user_photo(user_id: str, body: dict[str, str] = Body(...)) -> dict[st
     return {"url": public_url}
 
 
+@router.post("/api/users/{user_id}/plants/photo")
+def upload_plant_photo(user_id: str, body: dict[str, str] = Body(...)) -> dict[str, str]:
+    """Upload a plant photo (base64) to Firebase Storage and return its public URL.
+
+    Expects JSON: { "filename": "plant.jpg", "content": "data:image/jpeg;base64,..." }
+    Returns: { "url": "https://..." }
+    """
+    filename = body.get("filename") or f"plant_{user_id}.jpg"
+    content = body.get("content")
+    if not content:
+        raise HTTPException(status_code=400, detail="Se requiere el campo 'content' con la imagen en base64.")
+
+    if "," in content:
+        _, b64 = content.split(",", 1)
+    else:
+        b64 = content
+
+    try:
+        data = base64.b64decode(b64)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Contenido base64 invalido") from exc
+
+    try:
+        bucket = get_storage_bucket()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    blob_path = f"plants/{user_id}/{filename}"
+    blob = bucket.blob(blob_path)
+    try:
+        blob.upload_from_string(data, content_type="image/jpeg")
+        try:
+            blob.make_public()
+            public_url = blob.public_url
+        except Exception:
+            public_url = f"https://firebasestorage.googleapis.com/v0/b/{bucket.name}/o/{urllib.parse.quote(blob_path, safe='')}?alt=media"
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Error subiendo a Storage: {str(exc)}") from exc
+
+    return {"url": public_url}
+
+
 def _populate_plants_with_relations(plants: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Attach category, care types and pests to every plant document."""
 
@@ -356,7 +434,7 @@ def _populate_plants_with_relations(plants: list[dict[str, Any]]) -> list[dict[s
 
     enriched: list[dict[str, Any]] = []
     for plant in plants:
-        plant_copy = plant.copy()
+        plant_copy = _normalize_plant_document(plant)
         care_type_refs = [
             care_type_map[identifier]
             for identifier in plant_copy.get("careTypes", [])
@@ -373,13 +451,6 @@ def _populate_plants_with_relations(plants: list[dict[str, Any]]) -> list[dict[s
         plant_copy["careTypes"] = care_type_refs
         plant_copy["pests"] = pest_refs
         plant_copy["category"] = category_map.get(plant_copy.get("categoryId"))
-        plant_copy["wateringIntervalDays"] = _normalize_watering_interval(
-            plant_copy.get("wateringIntervalDays")
-        )
-        plant_copy["nextWateringDate"] = _calculate_next_watering_date(
-            plant_copy.get("lastWatered"),
-            plant_copy.get("wateringIntervalDays"),
-        )
 
         enriched.append(plant_copy)
 
@@ -466,7 +537,7 @@ def read_user_watering_calendar(user_id: str, month: str | None = Query(default=
 def read_plant_detail(plant_id: str) -> dict[str, Any]:
     """Return one plant together with care types and pests."""
 
-    plant = get_document("plants", plant_id)
+    plant = _normalize_plant_document(get_document("plants", plant_id))
     care_types = _load_documents_by_ids("careTypes", plant.get("careTypes", []))
     pests = _load_documents_by_ids("pests", plant.get("pests", []))
     return {"plant": plant, "careTypes": care_types, "pests": pests}
@@ -508,7 +579,10 @@ def list_collection(
     """Generic collection listing with optional filters and ordering."""
 
     parsed_filters = [_parse_filter_expression(item) for item in (filters or [])]
-    return get_collection(collection_name, filters=parsed_filters, order_by=order_by)
+    items = get_collection(collection_name, filters=parsed_filters, order_by=order_by)
+    if collection_name == "plants":
+        return [_normalize_plant_document(item) for item in items]
+    return items
 
 
 @router.post(
@@ -547,7 +621,10 @@ def read_collection_document(
 ) -> dict[str, Any]:
     """Fetch a single document by ID from the given collection."""
 
-    return get_document(collection_name, document_id)
+    document = get_document(collection_name, document_id)
+    if collection_name == "plants":
+        return _normalize_plant_document(document)
+    return document
 
 
 @router.put(
@@ -625,7 +702,7 @@ def delete_collection_document(
 @router.get("/api/collections/{collection_name}", response_model=ApiCollectionResponse)
 def read_collection_legacy(collection_name: CollectionName) -> dict[str, Any]:
     """Legacy endpoint that wraps list_collection with metadata."""
-    items = get_collection(collection_name)
+    items = list_collection(collection_name)
     return {
         "collection": collection_name,
         "count": len(items),

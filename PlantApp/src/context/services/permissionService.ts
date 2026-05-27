@@ -1,8 +1,5 @@
 //permissionService.ts
-import { 
-  requestCameraPermissionsAsync, 
-  getCameraPermissionsAsync 
-} from 'expo-camera';
+import { Camera } from 'expo-camera';
 import * as MediaLibrary from 'expo-media-library';
 
 export type PermissionStatus = 'granted' | 'denied' | 'undetermined';
@@ -22,11 +19,11 @@ const PermissionService = {
 
   async requestCameraPermission(): Promise<PermissionStatus> {
     // First check current permission to avoid re-prompting unnecessarily
-    const current = await getCameraPermissionsAsync();
+    const current = await Camera.getCameraPermissionsAsync();
     const currentStatus = normalizeStatus(current.granted, current.status);
     if (currentStatus !== 'undetermined') return currentStatus;
 
-    const { granted, status } = await requestCameraPermissionsAsync();
+    const { granted, status } = await Camera.requestCameraPermissionsAsync();
     return normalizeStatus(granted, status);
   },
 
@@ -44,7 +41,7 @@ const PermissionService = {
 
   async checkAllPermissions(): Promise<AppPermissions> {
     const [camera, mediaLibrary] = await Promise.all([
-      getCameraPermissionsAsync(),
+      Camera.getCameraPermissionsAsync(),
       MediaLibrary.getPermissionsAsync(),
     ]);
 

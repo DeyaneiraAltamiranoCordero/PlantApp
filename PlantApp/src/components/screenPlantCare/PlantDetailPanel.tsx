@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Modal, ScrollView, Text, TouchableOpacity, View, Image, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { ApiError, ApiValidationError, CareType, Category, getCareTypes, getCategories, getPestDocument, getPests, Pest, Plant, updatePlant } from '../../context/services/api';
+import { ApiError, ApiValidationError, CareType, Category, deletePlant, getCareTypes, getCategories, getPestDocument, getPests, Pest, Plant, updatePlant } from '../../context/services/api';
 import { PlantDetailForm, PlantDetailFormValues } from './PlantDetailForm';
 import { usePlantCareStyles } from '../../screens/plantCare/PlantCare.style';
 import { Button } from '../ui/Button';
@@ -48,9 +48,10 @@ interface PlantDetailPanelProps {
   plant: Plant | null;
   onClose: () => void;
   onPlantUpdated: (plant: Plant) => void;
+  onPlantDeleted?: (plantId: string) => void;
 }
 
-export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: PlantDetailPanelProps) {
+export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated, onPlantDeleted }: PlantDetailPanelProps) {
   const { styles, theme } = usePlantCareStyles();
   const { showToast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
@@ -456,6 +457,8 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
         lastFertilized: values.lastFertilized,
         lastWatered: values.lastWatered,
         wateringIntervalDays: values.wateringIntervalDays ? Number(values.wateringIntervalDays) : null,
+        wateringFrequencyDays: values.wateringFrequencyDays ? Number(values.wateringFrequencyDays) : null,
+        wateringNotes: values.wateringNotes.trim() ? values.wateringNotes.trim() : null,
         careTypes,
         status: nextStatus,
       });
@@ -473,6 +476,37 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleDeletePlant = () => {
+    Alert.alert(
+      'Eliminar planta',
+      'Esta seguro de eliminar la planta.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deletePlant(plant.id);
+              onPlantDeleted?.(plant.id);
+              onClose();
+              showToast({ kind: 'success', title: 'Listo', message: 'Eliminamos la planta.' });
+            } catch (error) {
+              console.error('Error eliminando planta', error);
+              const message =
+                error instanceof ApiValidationError
+                  ? 'La API devolvió datos inválidos.'
+                  : error instanceof ApiError
+                    ? error.message
+                    : 'No pudimos eliminar la planta.';
+              showToast({ kind: 'error', title: 'Error', message });
+            }
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -520,9 +554,9 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
               borderColor: theme.colors.border,
             }}
           >
-            {plant.image ? (
+            {plant.imageUrl || plant.image ? (
               <Image
-                source={{ uri: plant.image }}
+                source={{ uri: plant.imageUrl || plant.image || '' }}
                 style={{ width: '100%', height: '100%' }}
                 resizeMode="cover"
               />
@@ -550,6 +584,7 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated }: Pl
               await ensureCareTypesLoaded();
             }}
             onSave={handleSave}
+            onDeletePress={handleDeletePlant}
             loading={isSaving}
           />
           <Button

@@ -1,4 +1,5 @@
 import 'react-native-gesture-handler';
+import './src/polyfills/weakRef';
 import { registerRootComponent } from 'expo';
 import * as WebBrowser from 'expo-web-browser';
 import App from './App';

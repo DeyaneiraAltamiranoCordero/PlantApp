@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet, Alert, ActivityIndicator, Text } from 'react-native';
 import { CameraScanner } from '../../components/camera/CameraScanner';
 import { identifyPlant } from '../../context/services/api';
+import { getPlantWateringInfo } from '../../context/services/geminiService';
 import { useTheme } from '../../theme/desingSystem';
 
 export default function ScannerScreen({ navigation }: any) {
@@ -14,8 +15,15 @@ export default function ScannerScreen({ navigation }: any) {
             console.log("Iniciando análisis con IA...");
             const imageData = data.base64 || data.uri;
             const analysis = await identifyPlant(imageData);
+            const wateringInfo = analysis.scientific_name
+                ? await getPlantWateringInfo(analysis.scientific_name)
+                : { wateringFrequencyDays: null, wateringNotes: null };
+            const mergedAnalysis = {
+                ...analysis,
+                ...wateringInfo,
+            };
             console.log("Planta identificada:", analysis.name);
-            navigation.navigate('ScanResult' as never, { result: analysis } as never);
+            navigation.navigate('ScanResult' as never, { result: mergedAnalysis, imageUri: data.uri, imageBase64: data.base64 } as never);
         } catch (error: any) {
             console.error("Error completo en el análisis:", error);
             let errorMessage = "No pudimos conectar con la IA.";

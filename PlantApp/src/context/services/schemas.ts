@@ -130,6 +130,8 @@ export const PlantSchema = z
     notes: z.string().optional(),
     description: z.string().optional(),
     wateringIntervalDays: z.number().int().positive().nullable().optional(),
+    wateringFrequencyDays: z.number().int().positive().nullable().optional(),
+    wateringNotes: z.string().nullable().optional(),
     nextWateringDate: z.string().nullable().optional(),
   })
   .passthrough();
@@ -142,6 +144,8 @@ export const WateringReminderPlantSchema = z
     categoryName: z.string().nullable().optional(),
     lastWatered: z.string().nullable().optional(),
     wateringIntervalDays: z.number().int().positive().nullable().optional(),
+    wateringFrequencyDays: z.number().int().positive().nullable().optional(),
+    wateringNotes: z.string().nullable().optional(),
     nextWateringDate: z.string().nullable().optional(),
     isOverdue: z.boolean().optional(),
   })

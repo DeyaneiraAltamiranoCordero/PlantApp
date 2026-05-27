@@ -109,6 +109,8 @@ export type Plant = {
   careTypes?: Array<string | CareType>;
   lastWatered?: string;
   wateringIntervalDays?: number | null;
+  wateringFrequencyDays?: number | null;
+  wateringNotes?: string | null;
   nextWateringDate?: string | null;
   fertilizerType?: string;
   lastFertilized?: string;
@@ -149,6 +151,8 @@ export type Pest = {
 export type IdentifyResult = {
     name: string;
     scientific_name?: string;
+  wateringFrequencyDays?: number | null;
+  wateringNotes?: string | null;
     category: string;
     age: string;
     growthTime: string;
@@ -397,6 +401,8 @@ export type WateringReminderPlant = {
   categoryName?: string | null;
   lastWatered?: string | null;
   wateringIntervalDays?: number | null;
+  wateringFrequencyDays?: number | null;
+  wateringNotes?: string | null;
   nextWateringDate?: string | null;
   isOverdue?: boolean;
 };
@@ -471,7 +477,11 @@ async function getAuthToken(): Promise<string> {
   if (!user) {
     throw new Error('No authenticated user');
   }
-  return getIdToken(user, true);
+  try {
+    return await getIdToken(user);
+  } catch (error) {
+    throw new Error('No se pudo obtener el token de Firebase para guardar la planta. Reintenta cuando la sesión esté establecida o vuelve a iniciar sesión.');
+  }
 }
 
 function isZodSchema(value: unknown): value is z.ZodTypeAny {
@@ -586,6 +596,14 @@ export async function uploadUserPhoto(userUid: string, filename: string, base64c
   return raw.url;
 }
 
+export async function uploadPlantPhoto(userUid: string, filename: string, base64content: string): Promise<string> {
+  const raw = await apiRequest<{ url: string }>(`/api/users/${userUid}/plants/photo`, {
+    method: 'POST',
+    body: { filename, content: `data:image/jpeg;base64,${base64content}` },
+  });
+  return raw.url;
+}
+
 export async function getPlants(): Promise<Plant[]> {
   return apiRequest(`/api/plants`, PlantsArraySchema);
 }
@@ -614,6 +632,12 @@ export async function updatePlant(
     method: 'PATCH',
     body: payload,
   }, PlantSchema);
+}
+
+export async function deletePlant(plantId: string): Promise<void> {
+  await apiRequest(`/api/plants/${plantId}`, {
+    method: 'DELETE',
+  });
 }
 
 export async function getCategories(options?: { forceRefresh?: boolean }): Promise<Category[]> {

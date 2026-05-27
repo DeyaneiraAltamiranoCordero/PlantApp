@@ -47,6 +47,7 @@ class PlantModel(FirestoreDocument):
     """Base model for plants owned by a user."""
 
     userId: str
+    image: str | None = None
     imageUrl: str | None = None
     name: str
     categoryId: str
@@ -64,7 +65,9 @@ class PlantModel(FirestoreDocument):
     temperature: str
     careTypes: list[str] = Field(default_factory=list)
     lastWatered: str
+    wateringFrequencyDays: int | None = None
     wateringIntervalDays: int | None = None
+    wateringNotes: str | None = None
     nextWateringDate: str | None = None
     fertilizerType: str
     lastFertilized: str
@@ -138,10 +141,13 @@ class WateringReminderPlantModel(FirestoreDocument):
     """Plant entry rendered inside the monthly watering calendar."""
 
     name: str
+    image: str | None = None
     imageUrl: str | None = None
     categoryName: str | None = None
     lastWatered: str | None = None
+    wateringFrequencyDays: int | None = None
     wateringIntervalDays: int | None = None
+    wateringNotes: str | None = None
     nextWateringDate: str | None = None
     isOverdue: bool = False
 

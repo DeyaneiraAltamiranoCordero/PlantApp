@@ -21,7 +21,7 @@ export default function PlantCareScreen() {
   const { currentUser } = useAuth();
   const { styles, theme } = usePlantCareStyles();
   const { showToast } = useToast();
-  const { plants, isLoading, loadPlants, updatePlantLocal } = usePlants();
+  const { plants, isLoading, loadPlants, updatePlantLocal, setPlants } = usePlants();
   const [activeTab, setActiveTab] = useState<PlantTab>('all');
   const [selectedPlant, setSelectedPlant] = useState<Plant | null>(null);
   const [togglingFavoriteIds, setTogglingFavoriteIds] = useState<string[]>([]);
@@ -80,6 +80,11 @@ export default function PlantCareScreen() {
   const handlePlantUpdated = (updated: Plant) => {
     updatePlantLocal(updated);
     setSelectedPlant(updated);
+  };
+
+  const handlePlantDeleted = (plantId: string) => {
+    setPlants((prev) => prev.filter((plant) => plant.id !== plantId));
+    setSelectedPlant(null);
   };
 
   const handleToggleFavorite = async (plant: Plant) => {
@@ -168,6 +173,7 @@ export default function PlantCareScreen() {
         plant={selectedPlant}
         onClose={() => setSelectedPlant(null)}
         onPlantUpdated={handlePlantUpdated}
+        onPlantDeleted={handlePlantDeleted}
       />
     </View>
   );
