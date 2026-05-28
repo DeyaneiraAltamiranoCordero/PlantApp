@@ -15,10 +15,10 @@ class Settings:
 
     def __init__(self) -> None:
         self.api_host = os.getenv("API_HOST", "127.0.0.1")
-        self.api_port = int(os.getenv("API_PORT", "8000"))
+        self.api_port = int(os.getenv("API_PORT", os.getenv("PORT", "8000")))
         self.api_env = os.getenv("API_ENV", "development")
 
-        raw_cors_origins = os.getenv("CORS_ORIGINS", "*")
+        raw_cors_origins = os.getenv("CORS_ORIGINS", os.getenv("ALLOWED_ORIGINS", "*"))
         self.cors_origins = [
             origin.strip() for origin in raw_cors_origins.split(",") if origin.strip()
         ] or ["*"]
@@ -32,6 +32,8 @@ class Settings:
             service_account_path = (BASE_DIR / service_account_path).resolve()
         self.firebase_service_account_path = service_account_path
         self.cloudinary_url = os.getenv("CLOUDINARY_URL")
+        self.max_group_messages = int(os.getenv("MAX_GROUP_MESSAGES", "100"))
+        self.max_dm_messages = int(os.getenv("MAX_DM_MESSAGES", "50"))
 
 
 @lru_cache(maxsize=1)

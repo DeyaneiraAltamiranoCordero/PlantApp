@@ -13,7 +13,7 @@ Backend API en FastAPI conectada a Firestore.
 
 ## Variables de entorno
 
-Copia `.env.example` a `.env` dentro de `backend_api` y ajusta:
+Copia `.env.example` a `.env` dentro de `backend` y ajusta:
 
 ```env
 API_HOST=127.0.0.1
@@ -21,7 +21,17 @@ API_PORT=8000
 API_ENV=development
 FIREBASE_SERVICE_ACCOUNT_PATH=../serviceAccountKey.json
 CORS_ORIGINS=http://localhost:8081,http://localhost:19006
+PORT=8002
+ALLOWED_ORIGINS=*
+MAX_GROUP_MESSAGES=100
+MAX_DM_MESSAGES=50
 ```
+
+Notas:
+
+- `PORT` y `ALLOWED_ORIGINS` son aliases compatibles con el ejemplo del profe.
+- Las variables `EXPO_PUBLIC_CHAT_APP` y `EXPO_PUBLIC_CHAT_WS_APP` van en el `.env` del frontend Expo, no en el backend.
+- `MAX_GROUP_MESSAGES` y `MAX_DM_MESSAGES` preparan el backend para limitar memoria cuando se agregue el chat real.
 
 ## Instalacion
 Dentro de nuestro ambiente de python

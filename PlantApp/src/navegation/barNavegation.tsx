@@ -4,7 +4,7 @@ import { useTheme } from '../theme/desingSystem';
 import HomeScreen from '../screens/home/Home';
 import ProfileScreen from '../screens/userProfile/UserProfile';
 import PlantCareScreen from '../screens/plantCare/PlantCare';
-import FriendsScreen from '../screens/friends/Friends';
+import FriendsScreen from '../screens/friends/Chat';
 import ScannerScreen from '../screens/scanner/ScannerScreen';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { View, Pressable, Alert, Linking } from 'react-native';
@@ -157,9 +157,9 @@ export default function TabNavigator() {
                 name="Friends"
                 component={FriendsScreen}
                 options={{
-                    tabBarLabel: 'Amigos',
+                    tabBarLabel: 'Chat',
                     tabBarIcon: ({ color, size }) => (
-                        <MaterialCommunityIcons name="account-group-outline" size={size} color={color} />
+                        <MaterialCommunityIcons name="message-text-outline" size={size} color={color} />
                     ),
                 }}
             />

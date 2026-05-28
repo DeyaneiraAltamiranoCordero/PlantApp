@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, FlatList, Text, View } from 'react-native';
+import { Alert, FlatList, Text, View, Platform, StatusBar } from 'react-native';
 import { ApiError, ApiValidationError, Plant, getUserPlants, prefetchPlantCatalogs, updatePlant } from '../../context/services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -120,7 +120,7 @@ export default function PlantCareScreen() {
   };
 
   const renderHeader = () => (
-    <>
+    <View style={{ paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0 }}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Mis Plantas</Text>
         <Text style={styles.headerSubtitle}>Organizá y edita las plantas que detectaste o cargaste.</Text>
@@ -136,7 +136,7 @@ export default function PlantCareScreen() {
       <View style={styles.plantsContainer}>
         <Text style={styles.sectionTitle}>Listado</Text>
       </View>
-    </>
+    </View>
   );
 
   return (

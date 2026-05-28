@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Image, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Barometer } from 'expo-sensors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
@@ -40,11 +40,11 @@ const WEATHER_MESSAGES: Record<WeatherState, string> = {
 };
 
 const WEATHER_ICONS: Record<WeatherState, keyof typeof Feather.glyphMap> = {
-  default: 'leaf',
+  default: 'feather',
   sunny: 'sun',
   rain: 'cloud-rain',
   storm: 'cloud-lightning',
-  humid: 'droplet',
+  humid: 'cloud-drizzle',
 };
 
 const HIGH_PRESSURE_HPA = 1013;
@@ -562,7 +562,7 @@ export default function HomeScreen() {
             {selectedDayPlants.map((plant) => (
               <View key={plant.id} style={styles.reminderCard}>
                 <View style={styles.reminderIconWrap}>
-                  <Feather name="leaf" size={18} color={theme.colors.primary} />
+                  <MaterialCommunityIcons name="leaf" size={18} color={theme.colors.primary} />
                 </View>
                 <View style={styles.reminderContent}>
                   <Text style={styles.reminderTitle}>{plant.name}</Text>
