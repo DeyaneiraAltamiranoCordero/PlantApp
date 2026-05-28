@@ -12,7 +12,11 @@
       }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_CHAT_APP": "https://chat-backend-4nzg.onrender.com",
+        "EXPO_PUBLIC_CHAT_WS_APP": "wss://chat-backend-4nzg.onrender.com"
+      }
     },
     "production": {
       "autoIncrement": true
