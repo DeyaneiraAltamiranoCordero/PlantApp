@@ -14,19 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "671777128731-7vbe72qpfs5p21f7mg5e1e47jp0njsnr.apps.googleusercontent.com",
+          "client_id": "671777128731-qk97f3igkl3n5tffcqrb9p4g10eiu6sk.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.plantapp",
-            "certificate_hash": "5704326d0f77e8461f66b1b1ca59fe71e093d5f5"
-          }
-        },
-        {
-          "client_id": "671777128731-bcdi8k0fadoek0n5co9a75b916tf1uvp.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.plantapp",
-            "certificate_hash": "3407a55acd476b5ffbb4daab21be6861b8d4d499"
+            "certificate_hash": "8fc9820a5f44e8d51e59690018b77d5c0569bc57"
           }
         },
         {

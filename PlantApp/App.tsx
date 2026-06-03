@@ -19,6 +19,40 @@ import { ThemeProvider, useTheme } from "./src/theme/desingSystem";
 
 const Stack = createNativeStackNavigator();
 
+type ErrorBoundaryState = {
+  error: Error | null;
+};
+
+class AppErrorBoundary extends React.Component<React.PropsWithChildren, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[AppErrorBoundary] Render error:', error, info.componentStack);
+    SplashScreen.hideAsync().catch((err) => console.error('[AppErrorBoundary] SplashScreen error:', err));
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <View style={{ flex: 1, backgroundColor: '#ffffff', padding: 24, justifyContent: 'center' }}>
+          <Text style={{ color: '#D94F4F', fontSize: 20, fontWeight: '700', marginBottom: 12 }}>
+            La app no pudo renderizar
+          </Text>
+          <Text style={{ color: '#2D2A26', fontSize: 15, lineHeight: 22 }}>
+            {this.state.error.message}
+          </Text>
+        </View>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 function Navigation() {
   const themeContext = useTheme();
   const theme = themeContext?.theme || { colors: { background: '#ffffff', primary: '#2D5A27' } };
@@ -29,10 +63,7 @@ function Navigation() {
 
   React.useEffect(() => {
     console.log('[App] useEffect - loading changed:', loading);
-    if (!loading) {
-      console.log('[App] Hiding SplashScreen');
-      SplashScreen.hideAsync().catch((err) => console.error('[App] SplashScreen error:', err));
-    }
+    SplashScreen.hideAsync().catch((err) => console.error('[App] SplashScreen error:', err));
   }, [loading]);
 
   if (loading) {
@@ -67,20 +98,26 @@ function Navigation() {
 }
 
 export default function App() {
+  React.useEffect(() => {
+    SplashScreen.hideAsync().catch((err) => console.error('[App] SplashScreen error:', err));
+  }, []);
+
   return (
     <SafeAreaProvider>
       <StatusBar style="auto" />
-      <ThemeProvider>
-        <ToastProvider>
-          <AuthProvider>
-            <PlantProvider>
-              <WateringNotificationsProvider>
-                <Navigation />
-              </WateringNotificationsProvider>
-            </PlantProvider>
-          </AuthProvider>
-        </ToastProvider>
-      </ThemeProvider>
+      <AppErrorBoundary>
+        <ThemeProvider>
+          <ToastProvider>
+            <AuthProvider>
+              <PlantProvider>
+                <WateringNotificationsProvider>
+                  <Navigation />
+                </WateringNotificationsProvider>
+              </PlantProvider>
+            </AuthProvider>
+          </ToastProvider>
+        </ThemeProvider>
+      </AppErrorBoundary>
     </SafeAreaProvider>
   );
 }

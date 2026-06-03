@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import {
   getUserProfile,
+  updatePlant,
   WateringReminderPlant,
 } from '../../context/services/api';
 import { useTheme } from '../../theme/desingSystem';
@@ -290,6 +291,7 @@ export default function HomeScreen() {
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(todayIso());
   const [weatherState, setWeatherState] = useState<WeatherState>('default');
+  const [updatingPlantId, setUpdatingPlantId] = useState<string | null>(null);
 
   const calendar = useMemo(() => buildFallbackCalendar(plantsData, calendarMonthKey), [plantsData, calendarMonthKey]);
 
@@ -369,6 +371,19 @@ export default function HomeScreen() {
       setIsLoading(false);
     }
   }, [currentUser]);
+
+  const handleWaterPlant = useCallback(async (plantId: string) => {
+    if (updatingPlantId) return;
+    setUpdatingPlantId(plantId);
+    try {
+      await updatePlant(plantId, { lastWatered: todayIso() });
+      await loadSummary(false);
+    } catch (error) {
+      console.warn('Error al registrar riego:', error);
+    } finally {
+      setUpdatingPlantId(null);
+    }
+  }, [updatingPlantId, loadSummary]);
 
   const changeMonth = useCallback((offset: number) => {
     setCalendarMonthKey((previousMonthKey) => {
@@ -583,6 +598,25 @@ export default function HomeScreen() {
                     <Text style={styles.reminderMeta}>Siguiente riego: {formatLongDate(plant.nextWateringDate)}</Text>
                   ) : null}
                 </View>
+                {selectedDate === todayIso() ? (
+                  <TouchableOpacity
+                    style={[
+                      styles.waterCheckButton,
+                      updatingPlantId === plant.id && styles.waterCheckButtonActive,
+                    ]}
+                    onPress={() => handleWaterPlant(plant.id)}
+                    disabled={updatingPlantId !== null}
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Marcar ${plant.name} como regada`}
+                  >
+                    {updatingPlantId === plant.id ? (
+                      <ActivityIndicator size="small" color={theme.colors.primary} />
+                    ) : (
+                      <Feather name="check" size={18} color={theme.colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                ) : null}
               </View>
             ))}
           </View>
@@ -605,16 +639,35 @@ export default function HomeScreen() {
           <View style={styles.listStack}>
             {pendingPlants.map((plant) => (
               <View key={plant.id} style={styles.pendingCard}>
-                <View style={styles.pendingHeader}>
-                  <Text style={styles.reminderTitle}>{plant.name}</Text>
-                  {plant.isOverdue ? <Text style={styles.overdueChip}>Atrasada</Text> : null}
+                <View style={styles.pendingContent}>
+                  <View style={styles.pendingHeader}>
+                    <Text style={styles.reminderTitle}>{plant.name}</Text>
+                    {plant.isOverdue ? <Text style={styles.overdueChip}>Atrasada</Text> : null}
+                  </View>
+                  <Text style={styles.reminderSubtitle}>{plant.categoryName || 'Sin categoría'}</Text>
+                  <Text style={styles.reminderMeta}>
+                    {plant.nextWateringDate
+                      ? `Debía regarse: ${formatLongDate(plant.nextWateringDate)}`
+                      : 'Sin próxima fecha de riego'}
+                  </Text>
                 </View>
-                <Text style={styles.reminderSubtitle}>{plant.categoryName || 'Sin categoría'}</Text>
-                <Text style={styles.reminderMeta}>
-                  {plant.nextWateringDate
-                    ? `Debía regarse: ${formatLongDate(plant.nextWateringDate)}`
-                    : 'Sin próxima fecha de riego'}
-                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.waterCheckButton,
+                    updatingPlantId === plant.id && styles.waterCheckButtonActive,
+                  ]}
+                  onPress={() => handleWaterPlant(plant.id)}
+                  disabled={updatingPlantId !== null}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Marcar ${plant.name} como regada`}
+                >
+                  {updatingPlantId === plant.id ? (
+                    <ActivityIndicator size="small" color={theme.colors.primary} />
+                  ) : (
+                    <Feather name="check" size={18} color={theme.colors.primary} />
+                  )}
+                </TouchableOpacity>
               </View>
             ))}
           </View>

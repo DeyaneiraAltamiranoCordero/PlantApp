@@ -283,11 +283,17 @@ export const createHomeStyles = (theme: AppTheme) =>
             borderColor: theme.colors.border,
         },
         pendingCard: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: theme.spacing.md,
             backgroundColor: theme.colors.card,
             borderRadius: theme.radius.xl,
             padding: theme.spacing.lg,
             borderWidth: 1,
             borderColor: theme.colors.border,
+        },
+        pendingContent: {
+            flex: 1,
         },
         pendingHeader: {
             flexDirection: 'row',
@@ -488,5 +494,20 @@ export const createHomeStyles = (theme: AppTheme) =>
             color: theme.colors.mutedForeground,
             fontFamily: theme.typography.fontFamily.default,
             marginBottom: theme.spacing.md,
+        },
+        waterCheckButton: {
+            width: 40,
+            height: 40,
+            borderRadius: theme.radius.full,
+            borderWidth: 1.5,
+            borderColor: theme.colors.border,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: theme.colors.card,
+            alignSelf: 'center',
+        },
+        waterCheckButtonActive: {
+            backgroundColor: theme.colors.accent,
+            borderColor: theme.colors.primary,
         },
     });

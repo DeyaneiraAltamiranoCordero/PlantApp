@@ -194,6 +194,8 @@ export function PlantDetailForm({
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [isDeletingCategoryId, setIsDeletingCategoryId] = useState<string | null>(null);
   const [isMarkingHealthy, setIsMarkingHealthy] = useState(false);
+  const isPlantAlreadyHealthy =
+    pestsCount === 0 && (plant.status ?? '').trim().toLowerCase().includes('saludable');
 
   const selectedCategories = useMemo(() => {
     const known = new Map(categories.map((cat) => [cat.id, cat]));
@@ -917,7 +919,7 @@ export function PlantDetailForm({
         <Text style={formStyles.helperText}>Cada cuántos días se debe regar esta planta.</Text>
         {values.wateringFrequencyDays ? (
           <Text style={formStyles.helperText}>
-            Dato sugerido por Gemini: {values.wateringFrequencyDays} días{values.wateringNotes ? ` — ${values.wateringNotes}` : ''}.
+            Dato sugerido por la IA: {values.wateringFrequencyDays} días{values.wateringNotes ? ` — ${values.wateringNotes}` : ''}.
           </Text>
         ) : null}
         {errors.wateringIntervalDays ? (
@@ -965,11 +967,11 @@ export function PlantDetailForm({
       />
 
       <Button
-        title="Marcar planta como saludable"
+        title={isPlantAlreadyHealthy ? 'Planta saludable' : 'Marcar planta como saludable'}
         variant="secondary"
         onPress={handleMarkPlantHealthy}
         loading={isMarkingHealthy}
-        disabled={isMarkingHealthy || loading}
+        disabled={isPlantAlreadyHealthy || isMarkingHealthy || loading}
         style={{ marginTop: theme.spacing.md }}
       />
 

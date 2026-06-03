@@ -95,6 +95,25 @@ export const useLoginTheme = () => {
       textAlign: 'center',
       marginBottom: theme.spacing.xs,
     },
+    registerHeaderRow: {
+      width: '100%',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: theme.spacing.xs,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.colors.muted,
+    },
+    backButtonSpacer: {
+      width: 40,
+      height: 40,
+    },
     formNote: {
       color: theme.colors.mutedForeground,
       fontSize: theme.typography.size.sm,

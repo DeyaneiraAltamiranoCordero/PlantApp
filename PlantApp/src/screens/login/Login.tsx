@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { Button } from '../../components/ui/Button';
 import { InputTextField } from '../../components/ui/InputText';
@@ -26,6 +27,21 @@ export default function LoginScreen() {
   const [isGoogleSigningIn, setIsGoogleSigningIn] = useState(false);
   const [isEmailSigningIn, setIsEmailSigningIn] = useState(false);
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+
+  const getEmailSignInErrorMessage = (error: unknown) => {
+    const code = typeof error === 'object' && error && 'code' in error ? String((error as any).code) : '';
+
+    if (
+      code === 'auth/invalid-credential' ||
+      code === 'auth/wrong-password' ||
+      code === 'auth/user-not-found' ||
+      code === 'auth/invalid-login-credentials'
+    ) {
+      return 'Usuario o contraseña no coinciden.';
+    }
+
+    return 'No se pudo iniciar sesión con correo y contraseña. Verificá tus datos e intentá de nuevo.';
+  };
 
   useEffect(() => {
     const loadRememberedEmail = async () => {
@@ -72,7 +88,7 @@ export default function LoginScreen() {
       await signInWithEmail(normalizedEmail, password);
       await persistRememberedEmail(normalizedEmail, rememberEmail);
     } catch (error) {
-      Alert.alert('Error', 'No se pudo iniciar sesión con correo y contraseña. Verificá tus datos e intentá de nuevo.');
+      Alert.alert('Error', getEmailSignInErrorMessage(error));
     } finally {
       setIsEmailSigningIn(false);
     }
@@ -152,7 +168,22 @@ export default function LoginScreen() {
       )}
 
       <View style={styles.formCard}>
-        <Text style={styles.formTitle}>{mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}</Text>
+        {mode === 'register' ? (
+          <View style={styles.registerHeaderRow}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => setMode('login')}
+              accessibilityRole="button"
+              accessibilityLabel="Volver"
+            >
+              <MaterialCommunityIcons name="chevron-left" size={24} color={theme.colors.foreground} />
+            </TouchableOpacity>
+            <Text style={styles.formTitle}>Crear cuenta</Text>
+            <View style={styles.backButtonSpacer} />
+          </View>
+        ) : (
+          <Text style={styles.formTitle}>{mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}</Text>
+        )}
 
         {mode === 'register' && (
           <Text style={styles.formNote}>
