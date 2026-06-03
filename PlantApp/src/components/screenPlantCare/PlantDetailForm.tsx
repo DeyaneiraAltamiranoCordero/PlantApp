@@ -97,6 +97,9 @@ interface PlantDetailFormProps {
   onOpenPests: () => void;
   careTypesCount: number;
   onOpenCareTypes: () => void;
+  onCreateCategory?: (payload: { name: string; description?: string }) => Promise<Category>;
+  onDeleteCategory?: (category: Category) => Promise<void>;
+  onMarkHealthy?: () => Promise<void>;
   onSave: (values: PlantDetailFormValues) => Promise<void>;
   onDeletePress?: () => void;
   loading?: boolean;
@@ -109,6 +112,9 @@ export function PlantDetailForm({
   onOpenPests,
   careTypesCount,
   onOpenCareTypes,
+  onCreateCategory,
+  onDeleteCategory,
+  onMarkHealthy,
   onSave,
   onDeletePress,
   loading,
@@ -183,6 +189,11 @@ export function PlantDetailForm({
   );
 
   const [summaryCategoryId, setSummaryCategoryId] = useState<string>(initialCategoryIds[0] ?? '');
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryDescription, setNewCategoryDescription] = useState('');
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [isDeletingCategoryId, setIsDeletingCategoryId] = useState<string | null>(null);
+  const [isMarkingHealthy, setIsMarkingHealthy] = useState(false);
 
   const selectedCategories = useMemo(() => {
     const known = new Map(categories.map((cat) => [cat.id, cat]));
@@ -204,6 +215,71 @@ export function PlantDetailForm({
       return { ...prev, categoryIds: [...prev.categoryIds, categoryId] };
     });
     setSummaryCategoryId(categoryId);
+  };
+
+  const removeCategory = (categoryId: string) => {
+    setValues((prev) => {
+      const next = prev.categoryIds.filter((id) => id !== categoryId);
+      return { ...prev, categoryIds: next };
+    });
+
+    setSummaryCategoryId((prev) => {
+      if (prev !== categoryId) return prev;
+      const next = selectedCategories.find((cat) => cat.id !== categoryId);
+      return next?.id ?? '';
+    });
+  };
+
+  const handleCreateCategory = async () => {
+    if (!onCreateCategory) return;
+    const name = newCategoryName.trim();
+    if (!name) {
+      showToast({ kind: 'warning', title: 'Aviso', message: 'Ingresa un nombre para la categoría.' });
+      return;
+    }
+
+    try {
+      setIsCreatingCategory(true);
+      const created = await onCreateCategory({
+        name,
+        description: newCategoryDescription.trim() || undefined,
+      });
+
+      addCategory(created.id);
+      setNewCategoryName('');
+      setNewCategoryDescription('');
+    } catch (error) {
+      console.error('Error creando categoría', error);
+      showToast({ kind: 'error', title: 'Error', message: 'No pudimos crear la categoría.' });
+    } finally {
+      setIsCreatingCategory(false);
+    }
+  };
+
+  const handleDeleteCategoryFromCatalog = async (category: Category) => {
+    if (!onDeleteCategory) return;
+
+    try {
+      setIsDeletingCategoryId(category.id);
+      await onDeleteCategory(category);
+      removeCategory(category.id);
+    } catch (error) {
+      console.error('Error eliminando categoría', error);
+      showToast({ kind: 'error', title: 'Error', message: 'No pudimos eliminar la categoría.' });
+    } finally {
+      setIsDeletingCategoryId(null);
+    }
+  };
+
+  const handleMarkPlantHealthy = async () => {
+    if (!onMarkHealthy) return;
+
+    try {
+      setIsMarkingHealthy(true);
+      await onMarkHealthy();
+    } finally {
+      setIsMarkingHealthy(false);
+    }
   };
 
   const handleChange = (field: keyof PlantDetailFormValues, value: string) => {
@@ -491,13 +567,8 @@ export function PlantDetailForm({
           {selectedCategories.map((cat) => {
             const isSelected = cat.id === summaryCategoryId;
             return (
-              <TouchableOpacity
+              <View
                 key={cat.id}
-                onPress={() => {
-                  setSummaryCategoryId(cat.id);
-                  setIsCategorySelectOpen(false);
-                }}
-                activeOpacity={0.85}
                 style={[
                   formStyles.dropdownItem,
                   isSelected && {
@@ -505,14 +576,32 @@ export function PlantDetailForm({
                     backgroundColor: `${theme.colors.primary}12`,
                   },
                 ]}
-                accessibilityRole="button"
-                accessibilityLabel={`Seleccionar ${cat.name}`}
               >
-                <View style={formStyles.greenDot} />
-                <Text style={formStyles.dropdownItemText} numberOfLines={1}>
-                  {cat.name}
-                </Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    setSummaryCategoryId(cat.id);
+                    setIsCategorySelectOpen(false);
+                  }}
+                  activeOpacity={0.85}
+                  style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: theme.spacing.md }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Seleccionar ${cat.name}`}
+                >
+                  <View style={formStyles.greenDot} />
+                  <Text style={formStyles.dropdownItemText} numberOfLines={1}>
+                    {cat.name}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => removeCategory(cat.id)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Quitar categoría ${cat.name}`}
+                >
+                  <Feather name="x" size={18} color={theme.colors.destructive} />
+                </TouchableOpacity>
+              </View>
             );
           })}
         </View>
@@ -573,33 +662,83 @@ export function PlantDetailForm({
             {categories.map((cat) => {
               const isSelected = values.categoryIds.includes(cat.id);
               return (
-                <TouchableOpacity
+                <View
                   key={cat.id}
-                  onPress={() => {
-                    addCategory(cat.id);
-                    setIsCategoryPickerVisible(false);
-                  }}
-                  activeOpacity={0.85}
                   style={[
                     formStyles.pickerItem,
                     isSelected && { borderColor: theme.colors.primary, backgroundColor: `${theme.colors.primary}12` },
                   ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Agregar categoría ${cat.name}`}
                 >
-                  <View style={formStyles.greenDot} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.fontFamily.semibold }}>
-                      {cat.name}
-                    </Text>
-                    <Text style={formStyles.readonlyDescription} numberOfLines={2}>
-                      {cat.description || 'Resumen no disponible.'}
-                    </Text>
-                  </View>
-                  <Feather name="plus" size={18} color={theme.colors.mutedForeground} />
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => {
+                      addCategory(cat.id);
+                      setIsCategoryPickerVisible(false);
+                    }}
+                    activeOpacity={0.85}
+                    style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: theme.spacing.md }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Agregar categoría ${cat.name}`}
+                  >
+                    <View style={formStyles.greenDot} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: theme.colors.foreground, fontFamily: theme.typography.fontFamily.semibold }}>
+                        {cat.name}
+                      </Text>
+                      <Text style={formStyles.readonlyDescription} numberOfLines={2}>
+                        {cat.description || 'Resumen no disponible.'}
+                      </Text>
+                    </View>
+                    <Feather name="plus" size={18} color={theme.colors.mutedForeground} />
+                  </TouchableOpacity>
+
+                  {onDeleteCategory ? (
+                    <TouchableOpacity
+                      onPress={() => handleDeleteCategoryFromCatalog(cat)}
+                      disabled={isDeletingCategoryId === cat.id}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Eliminar categoría ${cat.name}`}
+                    >
+                      <Feather
+                        name="trash-2"
+                        size={16}
+                        color={theme.colors.destructive}
+                        style={{ opacity: isDeletingCategoryId === cat.id ? 0.6 : 1 }}
+                      />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
               );
             })}
+
+            {onCreateCategory ? (
+              <View style={formStyles.createCategoryBox}>
+                <Text style={formStyles.readonlyTitle}>Crear categoría nueva</Text>
+                <TextInput
+                  style={[formStyles.input, { marginTop: theme.spacing.sm }]}
+                  value={newCategoryName}
+                  onChangeText={setNewCategoryName}
+                  placeholder="Nombre de la categoría"
+                  placeholderTextColor={theme.colors.mutedForeground}
+                />
+                <TextInput
+                  style={[formStyles.input, formStyles.textArea, { marginTop: theme.spacing.sm, minHeight: 70 }]}
+                  value={newCategoryDescription}
+                  onChangeText={setNewCategoryDescription}
+                  placeholder="Descripción (opcional)"
+                  placeholderTextColor={theme.colors.mutedForeground}
+                  multiline
+                />
+
+                <Button
+                  title="Crear categoría"
+                  onPress={handleCreateCategory}
+                  loading={isCreatingCategory}
+                  disabled={isCreatingCategory}
+                  style={{ marginTop: theme.spacing.md }}
+                />
+              </View>
+            ) : null}
           </ScrollView>
         </View>
       </Modal>
@@ -825,6 +964,15 @@ export function PlantDetailForm({
         addA11yLabel="Agregar plaga"
       />
 
+      <Button
+        title="Marcar planta como saludable"
+        variant="secondary"
+        onPress={handleMarkPlantHealthy}
+        loading={isMarkingHealthy}
+        disabled={isMarkingHealthy || loading}
+        style={{ marginTop: theme.spacing.md }}
+      />
+
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md, marginTop: theme.spacing.xl }}>
         <View style={{ flex: 1 }}>
           <Button
@@ -1015,6 +1163,14 @@ function createFormStyles(theme: AppTheme) {
       padding: theme.spacing.md,
       borderWidth: 1,
       borderColor: 'transparent',
+    },
+    createCategoryBox: {
+      marginTop: theme.spacing.md,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.radius.lg,
+      backgroundColor: theme.colors.card,
+      padding: theme.spacing.md,
     },
     readonlyTitle: {
       fontSize: theme.typography.size.base,

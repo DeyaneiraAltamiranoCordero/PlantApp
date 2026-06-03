@@ -155,6 +155,14 @@ export const useLoginTheme = () => {
       fontSize: theme.typography.size.base,
       fontFamily: theme.typography.fontFamily.default,
     },
+    modalActions: {
+      flexDirection: 'row',
+      gap: theme.spacing.sm,
+      marginTop: theme.spacing.xs,
+    },
+    modalActionButton: {
+      flex: 1,
+    },
   });
 
   return { styles, theme, isDark };

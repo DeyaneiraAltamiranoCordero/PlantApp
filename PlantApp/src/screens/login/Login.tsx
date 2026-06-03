@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { Button } from '../../components/ui/Button';
 import { InputTextField } from '../../components/ui/InputText';
 import { useAuth } from '../../context/AuthContext';
@@ -10,6 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export default function LoginScreen() {
   const { signInWithGoogle, createAccountWithEmail, signInWithEmail, resetPassword, loading } = useAuth();
   const { styles, theme } = useLoginTheme();
+  const navigation = useNavigation<any>();
   console.log('[LoginScreen] Rendering');
 
   const [mode, setMode] = useState<'login' | 'register'>('login');
@@ -24,7 +26,6 @@ export default function LoginScreen() {
   const [isGoogleSigningIn, setIsGoogleSigningIn] = useState(false);
   const [isEmailSigningIn, setIsEmailSigningIn] = useState(false);
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
-  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   useEffect(() => {
     const loadRememberedEmail = async () => {
@@ -114,23 +115,8 @@ export default function LoginScreen() {
     }
   };
 
-  const handleResetPassword = async () => {
-    const normalizedEmail = email.trim();
-    if (!normalizedEmail) {
-      Alert.alert('Correo requerido', 'Escribí tu correo para poder restablecer la contraseña.');
-      return;
-    }
-
-    setIsResettingPassword(true);
-    try {
-      await resetPassword(normalizedEmail);
-      Alert.alert('Revisá tu correo', 'Te enviamos un enlace para restablecer tu contraseña.');
-    }
-    catch (error) {
-      Alert.alert('Error', 'No se pudo enviar el correo de restablecimiento. Intentá de nuevo.');
-    } finally {
-      setIsResettingPassword(false);
-    }
+  const openResetPasswordScreen = () => {
+    navigation.navigate('ForgotPassword', { email: email.trim() });
   };
 
   return (
@@ -270,13 +256,11 @@ export default function LoginScreen() {
 
             <TouchableOpacity
               style={styles.resetLink}
-              onPress={handleResetPassword}
-              disabled={isResettingPassword || loading}
+              onPress={openResetPasswordScreen}
+              disabled={loading}
               activeOpacity={0.7}
             >
-              <Text style={styles.resetLinkText}>
-                {isResettingPassword ? 'Enviando enlace...' : 'Restablecer contraseña'}
-              </Text>
+              <Text style={styles.resetLinkText}>Olvidé mi contraseña</Text>
             </TouchableOpacity>
           </>
         ) : null}

@@ -295,7 +295,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await sendPasswordResetEmail(auth, email.trim());
     } catch (error) {
       console.error('Error al restablecer contraseña:', error);
-      throw error;
     }
   };
 

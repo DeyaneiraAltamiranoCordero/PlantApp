@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Modal, ScrollView, Text, TouchableOpacity, View, Image, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { ApiError, ApiValidationError, CareType, Category, deletePlant, getCareTypes, getCategories, getPestDocument, getPests, Pest, Plant, updatePlant } from '../../context/services/api';
+import { ApiError, ApiValidationError, CareType, Category, createCategory, deleteCategory, deletePlant, getCareTypes, getCategories, getPestDocument, getPests, Pest, Plant, updatePlant } from '../../context/services/api';
 import { PlantDetailForm, PlantDetailFormValues } from './PlantDetailForm';
 import { usePlantCareStyles } from '../../screens/plantCare/PlantCare.style';
 import { Button } from '../ui/Button';
@@ -478,6 +478,42 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated, onPl
     }
   };
 
+  const handleCreateCategory = async (payload: { name: string; description?: string }) => {
+    const created = await createCategory(payload);
+    const refreshed = await getCategories({ forceRefresh: true });
+    setCategories(refreshed);
+    showToast({ kind: 'success', title: 'Listo', message: 'Creamos la nueva categoría.' });
+    return created;
+  };
+
+  const handleDeleteCategory = async (category: Category) => {
+    await deleteCategory(category.id);
+    const refreshed = await getCategories({ forceRefresh: true });
+    setCategories(refreshed);
+    showToast({ kind: 'success', title: 'Listo', message: `Eliminamos la categoría "${category.name}".` });
+  };
+
+  const handleMarkHealthy = async () => {
+    try {
+      const updatedPlant = await updatePlant(plant.id, {
+        pests: [],
+        pestIds: [],
+        status: 'Saludable',
+      });
+      onPlantUpdated(updatedPlant);
+      showToast({ kind: 'success', title: 'Listo', message: 'Marcamos la planta como saludable.' });
+    } catch (error) {
+      console.error('Error marcando planta saludable', error);
+      const message =
+        error instanceof ApiValidationError
+          ? 'La API devolvió datos inválidos.'
+          : error instanceof ApiError
+            ? error.message
+            : 'No pudimos actualizar el estado de la planta.';
+      showToast({ kind: 'error', title: 'Error', message });
+    }
+  };
+
   const handleDeletePlant = () => {
     Alert.alert(
       'Eliminar planta',
@@ -583,6 +619,9 @@ export function PlantDetailPanel({ visible, plant, onClose, onPlantUpdated, onPl
               setIsCareTypesVisible(true);
               await ensureCareTypesLoaded();
             }}
+            onCreateCategory={handleCreateCategory}
+            onDeleteCategory={handleDeleteCategory}
+            onMarkHealthy={handleMarkHealthy}
             onSave={handleSave}
             onDeletePress={handleDeletePlant}
             loading={isSaving}

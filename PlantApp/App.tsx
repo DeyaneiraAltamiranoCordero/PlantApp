@@ -12,6 +12,7 @@ import { WateringNotificationsProvider } from './src/context/WateringNotificatio
 import { ToastProvider } from './src/context/ToastContext';
 import TabNavigator from "./src/navegation/barNavegation";
 import LoginScreen from './src/screens/login/Login';
+import ForgotPasswordScreen from './src/screens/login/ForgotPassword';
 import UserProfileScreen from './src/screens/userProfile/UserProfile';
 import ScanResultScreen from './src/screens/scanner/ScanResultScreen';
 import { ThemeProvider, useTheme } from "./src/theme/desingSystem";
@@ -55,6 +56,7 @@ function Navigation() {
           initialRouteName={currentUser ? "Main" : "Login"}
         >
           <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
           <Stack.Screen name="Main" component={TabNavigator} />
           <Stack.Screen name="UserProfile" component={UserProfileScreen} />
           <Stack.Screen name="ScanResult" component={ScanResultScreen} />

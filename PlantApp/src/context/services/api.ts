@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { z } from 'zod';
 import {
   CareTypesArraySchema,
+  CategorySchema,
   CategoriesArraySchema,
   ISODateStringSchema,
   PestsArraySchema,
@@ -648,6 +649,26 @@ export async function getCategories(options?: { forceRefresh?: boolean }): Promi
   const result = await apiRequest(`/api/categories`, CategoriesArraySchema);
   categoriesCache = Array.isArray(result) ? result : [];
   return categoriesCache;
+}
+
+export async function createCategory(payload: {
+  name: string;
+  description?: string;
+}): Promise<Category> {
+  const created = await apiRequest(`/api/categories`, {
+    method: 'POST',
+    body: payload,
+  }, CategorySchema);
+
+  categoriesCache = null;
+  return created;
+}
+
+export async function deleteCategory(categoryId: string): Promise<void> {
+  await apiRequest(`/api/categories/${categoryId}`, {
+    method: 'DELETE',
+  });
+  categoriesCache = null;
 }
 
 export async function getCareTypes(options?: { forceRefresh?: boolean }): Promise<CareType[]> {
