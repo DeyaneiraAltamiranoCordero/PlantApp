@@ -463,7 +463,7 @@ export default function HomeScreen() {
             <Text style={styles.headerMessage}>Cada planta tiene su tiempo de florecer.</Text>
           </View>
           <Image
-            source={require('../../../assets/images/logoSolo.png')}
+            source={require('../../../assets/images/hojas.png')}
             style={styles.headerLogo}
             resizeMode="contain"
           />
