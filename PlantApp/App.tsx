@@ -71,7 +71,7 @@ function Navigation() {
     return (
       <View style={{ flex: 1, backgroundColor: '#ffffff', justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#2D5A27" />
-          <Text style={{ marginTop: 10 }}>Cargando... (Auth: {String(authLoading)})</Text>
+        <Text style={{ marginTop: 10 }}>Cargando... (Auth: {String(authLoading)})</Text>
       </View>
     );
   }
@@ -81,16 +81,19 @@ function Navigation() {
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <NavigationContainer>
-        <Stack.Navigator
-          key={currentUser ? 'auth' : 'guest'}
-          screenOptions={{ headerShown: false }}
-          initialRouteName={currentUser ? "Main" : "Login"}
-        >
-          <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-          <Stack.Screen name="Main" component={TabNavigator} />
-          <Stack.Screen name="UserProfile" component={UserProfileScreen} />
-          <Stack.Screen name="ScanResult" component={ScanResultScreen} />
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {currentUser ? (
+            <>
+              <Stack.Screen name="Main" component={TabNavigator} />
+              <Stack.Screen name="UserProfile" component={UserProfileScreen} />
+              <Stack.Screen name="ScanResult" component={ScanResultScreen} />
+            </>
+          ) : (
+            <>
+              <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+            </>
+          )}
         </Stack.Navigator>
       </NavigationContainer>
     </View>
