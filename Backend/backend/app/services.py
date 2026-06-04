@@ -416,3 +416,84 @@ async def identify_plant_mock(images: list[str]) -> dict[str, Any]:
             "toxic": False,
             "fertilizerType": "N/A",
         }
+
+
+import mimetypes
+
+class CloudinaryService:
+    class UploadError(Exception):
+        def __init__(self, status_code: int, code: str, message: str):
+            self.status_code = status_code
+            self.code = code
+            self.message = message
+
+    def guess_mime(self, filename: str, fallback: str | None = None) -> str:
+        mime, _ = mimetypes.guess_type(filename)
+        return mime or fallback or "application/octet-stream"
+
+    def upload_file(
+        self,
+        file_bytes: bytes,
+        filename: str,
+        mime_type: str,
+        user_id: str,
+    ):
+        from .firebase import _parse_cloudinary_url
+        from .models import MediaAttachment
+        import hashlib
+        import time
+        import httpx
+
+        try:
+            api_key, api_secret, cloud_name = _parse_cloudinary_url()
+        except Exception as e:
+            raise self.UploadError(500, "CLOUDINARY_CONFIG_ERROR", str(e))
+
+        folder_name = f"plantapp/chat/{user_id}"
+        timestamp = str(int(time.time()))
+
+        upload_params = {
+            "timestamp": timestamp,
+            "folder": folder_name,
+        }
+        signature_base = "&".join(
+            f"{key}={value}" for key, value in sorted(upload_params.items())
+        )
+        signature = hashlib.sha1(f"{signature_base}{api_secret}".encode("utf-8")).hexdigest()
+
+        upload_url = f"https://api.cloudinary.com/v1_1/{cloud_name}/auto/upload"
+        files = {"file": (filename, file_bytes, mime_type)}
+        form_data = {
+            **upload_params,
+            "api_key": api_key,
+            "signature": signature,
+        }
+
+        try:
+            response = httpx.post(upload_url, data=form_data, files=files, timeout=60.0)
+        except Exception as e:
+            raise self.UploadError(500, "CLOUDINARY_REQUEST_ERROR", f"Fallo la conexion con Cloudinary: {str(e)}")
+
+        if response.status_code >= 400:
+            detail = response.json() if response.headers.get("content-type", "").startswith("application/json") else {}
+            error_msg = detail.get("error", {}).get("message", "Error desconocido de Cloudinary.")
+            raise self.UploadError(response.status_code, "CLOUDINARY_UPLOAD_FAILED", error_msg)
+
+        payload = response.json()
+        secure_url = payload.get("secure_url")
+        if not secure_url:
+            raise self.UploadError(500, "CLOUDINARY_RESPONSE_ERROR", "Cloudinary no devolvio una URL segura.")
+
+        return MediaAttachment(
+            url=secure_url,
+            public_id=payload.get("public_id", ""),
+            resource_type=payload.get("resource_type", "raw"),
+            format=payload.get("format", ""),
+            size_bytes=payload.get("bytes", len(file_bytes)),
+            original_filename=payload.get("original_filename", filename),
+            width=payload.get("width"),
+            height=payload.get("height"),
+            duration=payload.get("duration"),
+        )
+
+cloudinary_service = CloudinaryService()

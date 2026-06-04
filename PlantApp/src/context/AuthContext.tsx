@@ -300,17 +300,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     if (isWeb) {
+      try {
+        await AsyncStorage.removeItem('SERVER_TOKEN');
+      } catch (err) {
+        console.error('Error clearing SERVER_TOKEN on web:', err);
+      }
       setCurrentUser(null);
       return;
     }
 
     try {
+      try {
+        await GoogleSignin.signOut();
+      } catch (googleError) {
+        console.log('[AuthContext] GoogleSignin.signOut ignored error:', googleError);
+      }
+      
       const auth = getAuth();
-      await GoogleSignin.signOut();
       await firebaseSignOut(auth);
-      setCurrentUser(null);
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
+    } finally {
+      try {
+        await AsyncStorage.removeItem('SERVER_TOKEN');
+      } catch (err) {
+        console.error('Error clearing SERVER_TOKEN:', err);
+      }
+      setCurrentUser(null);
     }
   };
 

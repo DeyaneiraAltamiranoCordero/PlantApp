@@ -34,6 +34,10 @@ class Settings:
         self.cloudinary_url = os.getenv("CLOUDINARY_URL")
         self.max_group_messages = int(os.getenv("MAX_GROUP_MESSAGES", "100"))
         self.max_dm_messages = int(os.getenv("MAX_DM_MESSAGES", "50"))
+        self.group_encryption_key = os.getenv(
+            "GROUP_ENCRYPTION_KEY",
+            "fallback_group_encryption_key_32_bytes_base64_or_similar"
+        )
 
 
 @lru_cache(maxsize=1)
@@ -41,3 +45,6 @@ def get_settings() -> Settings:
     """Return a cached Settings instance."""
 
     return Settings()
+
+
+settings = get_settings()

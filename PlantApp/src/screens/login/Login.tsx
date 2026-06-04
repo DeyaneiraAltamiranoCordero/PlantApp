@@ -143,17 +143,17 @@ export default function LoginScreen() {
     >
       <View style={styles.heroCard}>
         <Image
-          source={require('../../../assets/images/logoSolo.png')}
+          source={require('../../../assets/images/hojas.png')}
           style={styles.heroLeafTop}
           resizeMode="contain"
         />
         <Image
-          source={require('../../../assets/images/logoSolo.png')}
+          source={require('../../../assets/images/hojas.png')}
           style={styles.heroLeafBottom}
           resizeMode="contain"
         />
         <Image
-          source={require('../../../assets/images/logoSolo.png')}
+          source={require('../../../assets/images/hojas.png')}
           style={styles.heroLeaves}
           resizeMode="contain"
         />

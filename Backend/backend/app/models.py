@@ -1,6 +1,6 @@
 """Pydantic models that represent the Firestore documents the API exposes."""
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -193,3 +193,58 @@ class IdentifyResponse(BaseModel):
     temperature: str = "N/A"
     fertilizerType: str = "N/A"
     description: str | None = "Sin descripción disponible."
+
+
+class MediaAttachment(BaseModel):
+    url: str
+    public_id: str
+    resource_type: str
+    format: str
+    size_bytes: int
+    original_filename: str
+    width: int | None = None
+    height: int | None = None
+    duration: float | None = None
+
+
+class ChatUser(BaseModel):
+    id: str
+    nickname: str
+    joined_at: str
+    is_online: bool
+    public_key: str | None = None
+
+
+class ChatMessage(BaseModel):
+    id: str
+    sender_id: str
+    sender_nickname: str
+    content: str
+    type: Literal["group", "dm"]
+    recipient_id: str | None = None
+    timestamp: str
+    ttl: int | None = None
+    expires_at: str | None = None
+    allow_read_receipt: bool = True
+    media: MediaAttachment | None = None
+
+
+class JoinRequest(BaseModel):
+    nickname: str
+
+
+class JoinResponse(BaseModel):
+    user: ChatUser
+    token: str
+
+
+class PublicKeyRequest(BaseModel):
+    public_key: str
+
+
+class CreateMessageRequest(BaseModel):
+    content: str
+    type: Literal["group", "dm"]
+    recipient_id: str | None = None
+    ttl: int | None = None
+    allow_read_receipt: bool = True

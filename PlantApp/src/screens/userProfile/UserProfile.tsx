@@ -72,10 +72,14 @@ export default function UserProfile() {
                     onPress: async () => {
                         try {
                             await signOut();
-                            navigation.reset({
-                                index: 0,
-                                routes: [{ name: 'Login' as never }],
-                            });
+                            try {
+                                navigation.reset({
+                                    index: 0,
+                                    routes: [{ name: 'Login' as never }],
+                                });
+                            } catch (navError) {
+                                console.log('[UserProfile] navigation.reset ignored (likely due to navigator unmounting):', navError);
+                            }
                         } catch (error) {
                             Alert.alert("Error", "No se pudo cerrar sesión");
                         }
